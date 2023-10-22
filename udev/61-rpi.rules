@@ -1,0 +1,3 @@
+
+# Raspberry Pi Pico USB
+ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", MODE="660", GROUP="plugdev", TAG+="uaccess"
