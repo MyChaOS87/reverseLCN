@@ -1,0 +1,13 @@
+services:
+  reverselcn:
+    container_name: reverse_lcn
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    restart: always
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    
+
+
+    
