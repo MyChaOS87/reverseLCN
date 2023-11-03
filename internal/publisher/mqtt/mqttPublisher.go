@@ -6,36 +6,32 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
+	"github.com/MyChaOS87/reverseLCN.git/internal/publisher"
 	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
 )
 
-type Publisher interface {
-	Run(ctx context.Context, cancel context.CancelFunc)
-	ToTopic(topic string) Topic
-}
+var (
+	_ publisher.Publisher = &mqttPublisher{}
+	_ publisher.Topic     = &mqttTopic{}
+)
 
-type Topic interface {
-	PublishString(s string)
-	Publish(i interface{})
-}
-
-type topic struct {
+type mqttTopic struct {
 	topic  string
 	client mqtt.Client
 }
 
-type publisher struct {
+type mqttPublisher struct {
 	client mqtt.Client
 }
 
-func (p *publisher) ToTopic(topicName string) Topic {
-	return &topic{
+func (p *mqttPublisher) ToTopic(topicName string) publisher.Topic {
+	return &mqttTopic{
 		topic:  topicName,
 		client: p.client,
 	}
 }
 
-func (p *publisher) Run(ctx context.Context, cancel context.CancelFunc) {
+func (p *mqttPublisher) Run(ctx context.Context, cancel context.CancelFunc) {
 	token := p.client.Connect()
 	go func() {
 		select {
@@ -52,7 +48,7 @@ func (p *publisher) Run(ctx context.Context, cancel context.CancelFunc) {
 	}()
 }
 
-func (t *topic) publishInternal(data string) {
+func (t *mqttTopic) publishInternal(data string) {
 	token := t.client.Publish(t.topic, 1, false, data)
 	go func() {
 		token.Wait()
@@ -64,11 +60,11 @@ func (t *topic) publishInternal(data string) {
 	}()
 }
 
-func (t *topic) PublishString(s string) {
+func (t *mqttTopic) PublishString(s string) {
 	t.publishInternal(s)
 }
 
-func (t *topic) Publish(data interface{}) {
+func (t *mqttTopic) Publish(data interface{}) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		log.Errorf("Error on Publish, cannot marshal JSON: %s", err)
@@ -78,7 +74,7 @@ func (t *topic) Publish(data interface{}) {
 	t.publishInternal(string(b))
 }
 
-func NewPublisher(options ...Option) Publisher {
+func NewPublisher(options ...Option) publisher.Publisher {
 	config := newDefaultConfig()
 
 	for _, opt := range options {
@@ -87,7 +83,7 @@ func NewPublisher(options ...Option) Publisher {
 
 	client := mqtt.NewClient(config.clientOptions)
 
-	return &publisher{
+	return &mqttPublisher{
 		client: client,
 	}
 }
