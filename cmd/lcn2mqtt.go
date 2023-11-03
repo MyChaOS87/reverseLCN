@@ -22,24 +22,16 @@ func main() {
 		publisher = mqtt.NewPublisher(
 			mqtt.Broker(cfg.Mqtt.Broker))
 		publisher.Run(ctx, cancel)
-
-		publisher.Topic("lcnIn").Subscribe(lcn.LcnPacket{}, func(data interface{}) {
-			if pkt, ok := data.(*lcn.LcnPacket); ok {
-				log.Infof("MQTT callback got LCN: %s", pkt.ToNiceString())
-			} else {
-				log.Errorf("Could not interpret MQTT: %s", data)
-			}
-		})
 	} else {
 		publisher = null.NewPublisher()
 	}
 
-	reader := serial.NewReader(
+	port := serial.NewPort(
 		serial.BaudRate(cfg.Serial.BaudRate),
 		serial.PortName(cfg.Serial.Port),
 		serial.Deserializer(lcn.Deserialize),
 	)
-	reader.Run(ctx, cancel, func(pkt packet.Packet) {
+	port.Run(ctx, cancel, func(pkt packet.Packet) {
 		log.Infof("%s", pkt.ToNiceString())
 
 		if lcn, ok := pkt.(*lcn.LcnPacket); ok {
@@ -52,6 +44,21 @@ func main() {
 				Publish(lcn)
 		} else {
 			log.Debug("Not a LCN Packet")
+		}
+	})
+
+	publisher.Topic("lcnIn").Subscribe(lcn.LcnPacket{}, func(data interface{}) {
+		if pkt, ok := data.(*lcn.LcnPacket); ok {
+			log.Infof("MQTT callback got LCN: %s", pkt.ToNiceString())
+			buf, err := pkt.Serialize()
+			if err != nil {
+				log.Error("Could not Serialize LCN: %s", pkt.ToNiceString())
+				return
+			}
+
+			go port.Send(buf)
+		} else {
+			log.Errorf("Could not interpret MQTT: %s", data)
 		}
 	})
 
