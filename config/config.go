@@ -22,6 +22,7 @@ type SerialConfig struct {
 type MqttConfig struct {
 	Broker    string
 	RootTopic string
+	Enabled   bool
 }
 
 // Config struct.

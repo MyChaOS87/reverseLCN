@@ -6,22 +6,23 @@ import (
 
 	"go.bug.st/serial"
 
+	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker"
 	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
 )
 
 const bufferSize = 1024
 
 type Reader interface {
-	Run(ctx context.Context, cancel context.CancelFunc, eject EjectFunc)
+	Run(ctx context.Context, cancel context.CancelFunc, eject chunker.EjectFunc)
 }
 
 type reader struct {
 	portName string
 	mode     serial.Mode
-	chunker  chunker
+	chunker  chunker.Chunker
 }
 
-func (r *reader) Run(ctx context.Context, cancel context.CancelFunc, eject EjectFunc) {
+func (r *reader) Run(ctx context.Context, cancel context.CancelFunc, eject chunker.EjectFunc) {
 	port, err := serial.Open(r.portName, &r.mode)
 	if err != nil {
 		log.Errorf("Cannot Open Port %s: %s", r.portName, err.Error())
@@ -49,7 +50,7 @@ func (r *reader) Run(ctx context.Context, cancel context.CancelFunc, eject Eject
 					return
 				}
 
-				r.chunker.collect(buffer[0:len], eject)
+				r.chunker.Collect(buffer[0:len], eject)
 			case <-ctx.Done():
 				log.Errorf("Context done: %s", ctx.Err())
 				return
@@ -73,5 +74,6 @@ func NewReader(options ...Option) Reader {
 			DataBits: config.dataBits,
 			StopBits: config.stopBits,
 		},
+		chunker: chunker.NewChunker(config.deserializer, config.minLength),
 	}
 }

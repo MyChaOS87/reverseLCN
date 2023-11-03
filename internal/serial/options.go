@@ -1,15 +1,21 @@
 package serial
 
-import "go.bug.st/serial"
+import (
+	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/packet"
+	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/plain"
+	"go.bug.st/serial"
+)
 
 type (
 	Option func(*Config)
 	Config struct {
-		portName string
-		baudRate int
-		parity   serial.Parity
-		dataBits int
-		stopBits serial.StopBits
+		portName     string
+		baudRate     int
+		parity       serial.Parity
+		dataBits     int
+		stopBits     serial.StopBits
+		deserializer packet.Deserializer
+		minLength    int
 	}
 )
 
@@ -43,12 +49,26 @@ func StopBits(stopBits serial.StopBits) Option {
 	}
 }
 
+func Deserializer(deserializer packet.Deserializer) Option {
+	return func(c *Config) {
+		c.deserializer = deserializer
+	}
+}
+
+func MinLength(minLength int) Option {
+	return func(c *Config) {
+		c.minLength = minLength
+	}
+}
+
 func newDefaultConfig() *Config {
 	return &Config{
-		portName: "/dev/ttyACM0",
-		baudRate: 9600,
-		parity:   serial.NoParity,
-		dataBits: 8,
-		stopBits: serial.OneStopBit,
+		portName:     "/dev/ttyACM0",
+		baudRate:     9600,
+		parity:       serial.NoParity,
+		dataBits:     8,
+		stopBits:     serial.OneStopBit,
+		deserializer: plain.Deserialize,
+		minLength:    1,
 	}
 }

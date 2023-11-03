@@ -2,6 +2,7 @@
 mqtt:
   broker: tcp://mosquitto.internal.k8s.vogelherdweg.de:1883
   rootTopic: lcn
+  enabled: true
 
 serial:
   port: /dev/ttyUSB0

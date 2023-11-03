@@ -11,8 +11,8 @@ COPY cmd ./cmd
 
 RUN \
     --mount=type=cache,target=/root/.cache/go-build \
-    go build -v -ldflags "-X main.Version=$APP_VERSION -extldflags '-static'" -o /dist/reverseLCN ./cmd
-RUN ldd /dist/reverseLCN | tr -s '[:blank:]' '\n' | grep '^/' | \
+    go build -v -ldflags "-X main.Version=$APP_VERSION -extldflags '-static'" -o /dist/lcn2mqtt ./cmd
+RUN ldd /dist/lcn2mqtt | tr -s '[:blank:]' '\n' | grep '^/' | \
     xargs -I % sh -c 'mkdir -p $(dirname /dist%); cp % /dist%;'
 
 
@@ -26,4 +26,4 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /dist /
 COPY --from=builder /build/config/config.yml /config/
 
-ENTRYPOINT ["/reverseLCN"]
+ENTRYPOINT ["/lcn2mqtt"]
