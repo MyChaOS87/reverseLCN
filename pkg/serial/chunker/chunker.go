@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/packet"
 	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
+	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
 )
 
 var (

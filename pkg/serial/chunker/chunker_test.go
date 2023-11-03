@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker"
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/packet"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker"
+	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
 )
 
 type ejectExpectation struct {
