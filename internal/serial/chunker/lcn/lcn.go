@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/packet"
 	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
+	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
 	"github.com/pkg/errors"
 )
 

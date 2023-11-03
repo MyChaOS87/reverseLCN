@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/lcn"
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/packet"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/lcn"
+	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
 )
 
 func TestErrors(t *testing.T) {

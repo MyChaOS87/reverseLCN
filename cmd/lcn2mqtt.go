@@ -7,10 +7,10 @@ import (
 	"github.com/MyChaOS87/reverseLCN.git/internal/publisher"
 	"github.com/MyChaOS87/reverseLCN.git/internal/publisher/mqtt"
 	"github.com/MyChaOS87/reverseLCN.git/internal/publisher/null"
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial"
 	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/lcn"
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/packet"
 	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
+	"github.com/MyChaOS87/reverseLCN.git/pkg/serial"
+	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
 )
 
 func main() {
