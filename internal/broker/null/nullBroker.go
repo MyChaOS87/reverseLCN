@@ -3,7 +3,7 @@ package null
 import (
 	"context"
 
-	"github.com/MyChaOS87/reverseLCN.git/internal/publisher"
+	"github.com/MyChaOS87/reverseLCN.git/internal/broker"
 )
 
 type (
@@ -12,14 +12,14 @@ type (
 )
 
 var (
-	_ publisher.Publisher = &nullPublisher{}
-	_ publisher.Topic     = &nullTopic{}
+	_ broker.Publisher = &nullPublisher{}
+	_ broker.Topic     = &nullTopic{}
 )
 
 func (nullPublisher) Run(context.Context, context.CancelFunc) {
 }
 
-func (nullPublisher) ToTopic(string) publisher.Topic {
+func (nullPublisher) Topic(string) broker.Topic {
 	return &nullTopic{}
 }
 
@@ -28,6 +28,9 @@ func (nullTopic) Publish(interface{}) {
 
 func (nullTopic) PublishString(string) {}
 
-func NewPublisher() publisher.Publisher {
+func (nullTopic) Subscribe(hint interface{}, callback broker.CallbackFunction) {
+}
+
+func NewPublisher() broker.Publisher {
 	return &nullPublisher{}
 }
