@@ -8,7 +8,7 @@ var (
 )
 
 type Packet interface {
-	Serialize() []byte
+	Serialize() ([]byte, error)
 	ToString() string     // should return all embedded information
 	ToNiceString() string // can leave out less relevant information and should highlight most important information
 }

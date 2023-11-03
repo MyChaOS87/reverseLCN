@@ -89,3 +89,63 @@ func TestDeserialize(t *testing.T) {
 		})
 	}
 }
+
+func TestSerialize(t *testing.T) {
+	tests := []struct {
+		name   string
+		packet packet.Packet
+		error  error
+		output []byte
+	}{
+		// There is no check yet if cmd 5 is actually valid for length 6 through 20 as we have too little information atm
+		{
+			name:   "synthetic length 6",
+			packet: &lcn.LcnPacket{Src: 1, Seg: 2, Dst: 4, Cmd: 5, Payload: []byte{}},
+			output: []byte{0x80, 0x00, 0xd5, 0x2, 0x4, 0x5},
+		},
+		{
+			name:   "synthetic length 8",
+			packet: &lcn.LcnPacket{Src: 1, Seg: 2, Dst: 4, Cmd: 5, Payload: []byte{6, 7}},
+			output: []byte{0x80, 0b01 << 2, 0x15, 0x2, 0x4, 0x5, 0x06, 0x07},
+		},
+		{
+			name:   "synthetic length 12",
+			packet: &lcn.LcnPacket{Src: 1, Seg: 2, Dst: 4, Cmd: 5, Payload: []byte{6, 7, 8, 9, 10, 11}},
+			output: []byte{0x80, 0b10 << 2, 0x26, 0x2, 0x4, 0x5, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B},
+		},
+		{
+			name:   "synthetic length 20",
+			packet: &lcn.LcnPacket{Src: 1, Seg: 2, Dst: 4, Cmd: 5, Payload: []byte{6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}},
+			output: []byte{0x80, 0b11 << 2, 0x41, 0x2, 0x4, 0x5, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13},
+		},
+
+		{
+			name:   "real life 8",
+			packet: &lcn.LcnPacket{Src: 0x15, Info: 0x2, Seg: 0x0, Dst: 0x4, Cmd: 0x68, Payload: []uint8{0x30, 0x0}},
+			output: []byte{0xa8, 0x06, 0x75, 0x00, 0x04, 0x68, 0x30, 0x00},
+		},
+		{
+			name:   "real life 20",
+			packet: &lcn.LcnPacket{Src: 0x1f, Info: 0x42, Seg: 0x4, Dst: 0x4, Cmd: 0x22, Payload: []uint8{0x1, 0x0, 0x5, 0x38, 0x13, 0x3, 0xb, 0x17, 0x5, 0x3c, 0x0, 0x0, 0x1, 0x41}},
+			output: []byte{0xf8, 0x4e, 0x66, 0x04, 0x04, 0x22, 0x01, 0x00, 0x05, 0x38, 0x13, 0x03, 0x0b, 0x17, 0x05, 0x3c, 0x00, 0x00, 0x01, 0x41},
+		},
+		{
+			name:   "strange length",
+			packet: &lcn.LcnPacket{Src: 1, Seg: 2, Dst: 4, Cmd: 5, Payload: []byte{6}},
+			error:  lcn.ErrLcnPacketInvalid,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(fmt.Sprintf("%s_%s", t.Name(), tt.name), func(t *testing.T) {
+			output, err := tt.packet.Serialize()
+			if tt.error == nil {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.output, output)
+			} else {
+				assert.ErrorIs(t, tt.error, err)
+				assert.Nil(t, output)
+			}
+		})
+	}
+}

@@ -19,13 +19,13 @@ type ejectMock struct {
 }
 
 func (e *ejectMock) eject(p packet.Packet) {
-	e.Called(p.Serialize())
+	e.Called(p)
 }
 
-func onEject(b []byte, times int) ejectExpectation {
+func onEject(p packet.Packet, times int) ejectExpectation {
 	return ejectExpectation{
 		add: func(e *ejectMock) int {
-			e.On("eject", b).Times(times)
+			e.On("eject", p).Times(times)
 			return times
 		},
 	}
@@ -36,8 +36,8 @@ func onEject(b []byte, times int) ejectExpectation {
 type testPacket []byte
 
 // Serialize implements packet.Packet.
-func (t *testPacket) Serialize() []byte {
-	return *t
+func (t *testPacket) Serialize() ([]byte, error) {
+	panic("unimplemented")
 }
 
 // ToNiceString implements packet.Packet.
@@ -81,30 +81,38 @@ func TestChunkerCollect(t *testing.T) {
 		buffers           [][]byte
 		ejectExpectations []ejectExpectation
 	}{
-		{name: "nothing", buffers: [][]byte{}, ejectExpectations: []ejectExpectation{}},
 		{
-			name: "simple", buffers: [][]byte{{2, 2}},
+			name:              "nothing",
+			buffers:           [][]byte{},
+			ejectExpectations: []ejectExpectation{},
+		},
+		{
+			name:    "simple",
+			buffers: [][]byte{{2, 2}},
 			ejectExpectations: []ejectExpectation{
-				onEject([]byte{2, 2}, 1),
+				onEject(&testPacket{2, 2}, 1),
 			},
 		},
 		{
-			name: "simple * 2", buffers: [][]byte{{2, 2}, {2, 2}},
+			name:    "simple * 2",
+			buffers: [][]byte{{2, 2}, {2, 2}},
 			ejectExpectations: []ejectExpectation{
-				onEject([]byte{2, 2}, 2),
+				onEject(&testPacket{2, 2}, 2),
 			},
 		},
 		{
-			name: "simple partial", buffers: [][]byte{{2}, {2}},
+			name:    "simple partial",
+			buffers: [][]byte{{2}, {2}},
 			ejectExpectations: []ejectExpectation{
-				onEject([]byte{2, 2}, 1),
+				onEject(&testPacket{2, 2}, 1),
 			},
 		},
 		{
-			name: "simple partial + top level bs..", buffers: [][]byte{{2}, {3}, {4, 5}, {3, 4}, {5}},
+			name:    "simple partial + top level bs..",
+			buffers: [][]byte{{2}, {3}, {4, 5}, {3, 4}, {5}},
 			ejectExpectations: []ejectExpectation{
-				onEject([]byte{2, 3}, 1),
-				onEject([]byte{3, 4, 5}, 1),
+				onEject(&testPacket{2, 3}, 1),
+				onEject(&testPacket{3, 4, 5}, 1),
 			},
 		},
 	}

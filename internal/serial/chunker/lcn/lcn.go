@@ -67,7 +67,7 @@ func Deserialize(buf []byte) (packet.Packet, error) {
 		return nil, ErrLcnPacketInvalid
 	}
 
-	if checksum := calcChecksum(buf); checksum != int(lcn.Checksum) {
+	if checksum := calcChecksum(buf); checksum != lcn.Checksum {
 		log.Debugf("Wrong Checksum is %x expected: %x", lcn.Checksum, checksum)
 
 		return nil, ErrLcnPacketInvalidChecksum
@@ -77,8 +77,34 @@ func Deserialize(buf []byte) (packet.Packet, error) {
 	return lcn, nil
 }
 
-func (lcn *LcnPacket) Serialize() []byte {
-	panic("not implemented")
+// this function sets checksum and length information by itself
+func (lcn *LcnPacket) Serialize() ([]byte, error) {
+	bufLen := MIN_LCN_PACKET_LENGTH + len(lcn.Payload)
+	buf := make([]byte, bufLen)
+	buf[0] = mirrorSrc(lcn.Src)
+	buf[1] = lcn.Info
+	buf[2] = 0 // checksum will be set later
+	buf[3] = lcn.Seg
+	buf[4] = lcn.Dst
+	buf[5] = lcn.Cmd
+	copy(buf[MIN_LCN_PACKET_LENGTH:], lcn.Payload)
+
+	// correct length
+	found := false
+	for code, len := range lengthMapping {
+		if len == bufLen {
+			found = true
+			buf[1] = buf[1]&0xF3 | (code << 2)
+			break
+		}
+	}
+	if !found {
+		return nil, ErrLcnPacketInvalid
+	}
+
+	buf[2] = calcChecksum(buf)
+
+	return buf, nil
 }
 
 func (lcn *LcnPacket) ToString() string {
@@ -100,7 +126,7 @@ func mirrorSrc(in byte) byte {
 	return src
 }
 
-func calcChecksum(buf []byte) int {
+func calcChecksum(buf []byte) byte {
 	var checksum byte = 0
 
 	for i, b := range buf {
@@ -116,5 +142,5 @@ func calcChecksum(buf []byte) int {
 		checksum = byte(tmp2)
 	}
 
-	return int(checksum)
+	return checksum
 }
