@@ -23,7 +23,7 @@ The LCN-PKU has an USB port which indeed is a serial port adapter to the LCN-bus
 
 # mqtt control example
 ```
-pub lcnIn {\"Src\":1,\"Seg\":0,\"Dst\":33,\"Cmd\":19,\"Payload\":\"AIA=\"}
+pub lcn/in {\"Src\":1,\"Seg\":0,\"Dst\":33,\"Cmd\":19,\"Payload\":\"AIA=\"}
 ```
 
 # Disclaimer

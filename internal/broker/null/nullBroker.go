@@ -7,19 +7,19 @@ import (
 )
 
 type (
-	nullPublisher struct{}
-	nullTopic     struct{}
+	nullBroker struct{}
+	nullTopic  struct{}
 )
 
 var (
-	_ broker.Publisher = &nullPublisher{}
-	_ broker.Topic     = &nullTopic{}
+	_ broker.Broker = &nullBroker{}
+	_ broker.Topic  = &nullTopic{}
 )
 
-func (nullPublisher) Run(context.Context, context.CancelFunc) {
+func (nullBroker) Run(context.Context, context.CancelFunc) {
 }
 
-func (nullPublisher) Topic(string) broker.Topic {
+func (nullBroker) Topic(string) broker.Topic {
 	return &nullTopic{}
 }
 
@@ -31,6 +31,6 @@ func (nullTopic) PublishString(string) {}
 func (nullTopic) Subscribe(hint interface{}, callback broker.CallbackFunction) {
 }
 
-func NewPublisher() broker.Publisher {
-	return &nullPublisher{}
+func NewBroker() broker.Broker {
+	return &nullBroker{}
 }
