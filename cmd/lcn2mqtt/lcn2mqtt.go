@@ -17,13 +17,13 @@ func main() {
 	ctx, cancel, cfg := cmd.Init()
 	defer cancel()
 
-	var publisher broker.Publisher
+	var broker broker.Broker
 	if cfg.Mqtt.Enabled {
-		publisher = mqtt.NewPublisher(
+		broker = mqtt.NewBroker(
 			mqtt.Broker(cfg.Mqtt.Broker))
-		publisher.Run(ctx, cancel)
+		broker.Run(ctx, cancel)
 	} else {
-		publisher = null.NewPublisher()
+		broker = null.NewBroker()
 	}
 
 	port := serial.NewPort(
@@ -35,7 +35,7 @@ func main() {
 		log.Infof("%s", pkt.ToNiceString())
 
 		if lcn, ok := pkt.(*lcn.LcnPacket); ok {
-			publisher.
+			broker.
 				Topic(
 					fmt.Sprintf("%s/segment/%d/target/%d/",
 						cfg.Mqtt.RootTopic,
@@ -47,20 +47,24 @@ func main() {
 		}
 	})
 
-	publisher.Topic("lcnIn").Subscribe(lcn.LcnPacket{}, func(data interface{}) {
-		if pkt, ok := data.(*lcn.LcnPacket); ok {
-			log.Infof("MQTT callback got LCN: %s", pkt.ToNiceString())
-			buf, err := pkt.Serialize()
-			if err != nil {
-				log.Error("Could not Serialize LCN: %s", pkt.ToNiceString())
-				return
-			}
+	broker.Topic(
+		fmt.Sprintf(
+			"%s/in/",
+			cfg.Mqtt.RootTopic)).
+		Subscribe(lcn.LcnPacket{}, func(data interface{}) {
+			if pkt, ok := data.(*lcn.LcnPacket); ok {
+				log.Infof("MQTT callback got LCN: %s", pkt.ToNiceString())
+				buf, err := pkt.Serialize()
+				if err != nil {
+					log.Error("Could not Serialize LCN: %s", pkt.ToNiceString())
+					return
+				}
 
-			go port.Send(buf)
-		} else {
-			log.Errorf("Could not interpret MQTT: %s", data)
-		}
-	})
+				go port.Send(buf)
+			} else {
+				log.Errorf("Could not interpret MQTT: %s", data)
+			}
+		})
 
 	<-ctx.Done()
 

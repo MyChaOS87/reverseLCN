@@ -11,7 +11,7 @@ COPY cmd ./cmd
 
 RUN \
     --mount=type=cache,target=/root/.cache/go-build \
-    go build -v -ldflags "-X main.Version=$APP_VERSION -extldflags '-static'" -o /dist/lcn2mqtt ./cmd
+    go build -v -ldflags "-X main.Version=$APP_VERSION -extldflags '-static'" -o /dist/lcn2mqtt ./cmd/lcn2mqtt
 RUN ldd /dist/lcn2mqtt | tr -s '[:blank:]' '\n' | grep '^/' | \
     xargs -I % sh -c 'mkdir -p $(dirname /dist%); cp % /dist%;'
 

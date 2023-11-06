@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	_ broker.Publisher = &mqttPublisher{}
-	_ broker.Topic     = &mqttTopic{}
+	_ broker.Broker = &mqttBroker{}
+	_ broker.Topic  = &mqttTopic{}
 )
 
 type mqttTopic struct {
@@ -21,18 +21,18 @@ type mqttTopic struct {
 	client mqtt.Client
 }
 
-type mqttPublisher struct {
+type mqttBroker struct {
 	client mqtt.Client
 }
 
-func (p *mqttPublisher) Topic(topicName string) broker.Topic {
+func (p *mqttBroker) Topic(topicName string) broker.Topic {
 	return &mqttTopic{
 		topic:  topicName,
 		client: p.client,
 	}
 }
 
-func (p *mqttPublisher) Run(ctx context.Context, cancel context.CancelFunc) {
+func (p *mqttBroker) Run(ctx context.Context, cancel context.CancelFunc) {
 	token := p.client.Connect()
 	// go func() {
 	select {
@@ -101,7 +101,7 @@ func (t *mqttTopic) Subscribe(hint interface{}, callback broker.CallbackFunction
 	}()
 }
 
-func NewPublisher(options ...Option) broker.Publisher {
+func NewBroker(options ...Option) broker.Broker {
 	config := newDefaultConfig()
 
 	for _, opt := range options {
@@ -110,7 +110,7 @@ func NewPublisher(options ...Option) broker.Publisher {
 
 	client := mqtt.NewClient(config.clientOptions)
 
-	return &mqttPublisher{
+	return &mqttBroker{
 		client: client,
 	}
 }

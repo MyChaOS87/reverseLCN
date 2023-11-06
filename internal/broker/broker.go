@@ -2,7 +2,7 @@ package broker
 
 import "context"
 
-type Publisher interface {
+type Broker interface {
 	Run(ctx context.Context, cancel context.CancelFunc)
 	Topic(topic string) Topic
 }
