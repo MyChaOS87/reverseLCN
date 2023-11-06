@@ -13,4 +13,4 @@ type Topic interface {
 	Subscribe(hint interface{}, callback CallbackFunction)
 }
 
-type CallbackFunction func(data interface{})
+type CallbackFunction func(topic string, data interface{})

@@ -21,10 +21,10 @@ func main() {
 	if cfg.Mqtt.Enabled {
 		broker = mqtt.NewBroker(
 			mqtt.Broker(cfg.Mqtt.Broker))
-		broker.Run(ctx, cancel)
 	} else {
 		broker = null.NewBroker()
 	}
+	broker.Run(ctx, cancel)
 
 	port := serial.NewPort(
 		serial.BaudRate(cfg.Serial.BaudRate),
@@ -51,7 +51,7 @@ func main() {
 		fmt.Sprintf(
 			"%s/in/",
 			cfg.Mqtt.RootTopic)).
-		Subscribe(lcn.LcnPacket{}, func(data interface{}) {
+		Subscribe(lcn.LcnPacket{}, func(_ string, data interface{}) {
 			if pkt, ok := data.(*lcn.LcnPacket); ok {
 				log.Infof("MQTT callback got LCN: %s", pkt.ToNiceString())
 				buf, err := pkt.Serialize()
