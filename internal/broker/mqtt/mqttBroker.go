@@ -87,7 +87,7 @@ func (t *mqttTopic) Subscribe(hint interface{}, callback broker.CallbackFunction
 		}
 
 		log.Debugf("calling callback with: %#v", payload.Interface())
-		callback(payload.Interface())
+		callback(message.Topic(), payload.Interface())
 	}
 
 	token := t.client.Subscribe(t.topic, 0, internalCallback)
