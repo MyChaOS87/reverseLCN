@@ -8,11 +8,11 @@ import (
 	"slices"
 	"time"
 
-	"github.com/MyChaOS87/reverseLCN.git/internal/broker"
-	"github.com/MyChaOS87/reverseLCN.git/internal/broker/mqtt"
-	"github.com/MyChaOS87/reverseLCN.git/internal/broker/null"
 	"github.com/MyChaOS87/reverseLCN.git/internal/cmd"
 	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/lcn"
+	"github.com/MyChaOS87/reverseLCN.git/pkg/broker"
+	"github.com/MyChaOS87/reverseLCN.git/pkg/broker/mqtt"
+	"github.com/MyChaOS87/reverseLCN.git/pkg/broker/null"
 	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
 	"github.com/pterm/pterm"
 )
