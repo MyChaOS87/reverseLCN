@@ -24,6 +24,7 @@ func main() {
 	} else {
 		broker = null.NewBroker()
 	}
+
 	broker.Run(ctx, cancel)
 
 	port := serial.NewPort(
@@ -49,7 +50,7 @@ func main() {
 
 	broker.Topic(
 		fmt.Sprintf(
-			"%s/in/",
+			"%s/in",
 			cfg.Mqtt.RootTopic)).
 		Subscribe(lcn.LcnPacket{}, func(_ string, data interface{}) {
 			if pkt, ok := data.(*lcn.LcnPacket); ok {
@@ -57,6 +58,7 @@ func main() {
 				buf, err := pkt.Serialize()
 				if err != nil {
 					log.Error("Could not Serialize LCN: %s", pkt.ToNiceString())
+
 					return
 				}
 
