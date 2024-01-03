@@ -1,12 +1,14 @@
+//nolint:gochecknoglobals
 package main
 
 import (
-	"cmp"
 	"context"
 	"encoding/hex"
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/pterm/pterm"
 
 	"github.com/MyChaOS87/reverseLCN.git/internal/cmd"
 	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/lcn"
@@ -14,23 +16,61 @@ import (
 	"github.com/MyChaOS87/reverseLCN.git/pkg/broker/mqtt"
 	"github.com/MyChaOS87/reverseLCN.git/pkg/broker/null"
 	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
-	"github.com/pterm/pterm"
 )
 
 type ds struct {
 	lcn.LcnPacket
-	times int
+	lastSeen time.Time
+	times    int
 }
 
 var data map[string]ds
 
-var dst_map = map[int]string{
-	4: "Display",
+var idMap = map[int]string{
+	4:  "Display",
+	11: "LS Küche Eingang",
+	12: "LS Küche Fenster",
+	13: "LS Wohnzimmer",
+	31: "R8H 31 - Jalousie A",
+	32: "R8H 32 - Jalousie B",
+	33: "R8H 33 - Licht A",
+	34: "R8H 34 - Licht B",
+	35: "SH 35 - Licht Dimmer",
 }
 
-var cmd_map = map[int]string{
+var moduleOutputs = map[int]map[int]string{
+	33: {
+		0: "Strahler Wohnen/Essen",
+		1: "Deckenlampe Wohnzimmertisch",
+		2: "Wandlampe Wohnen Aussen",
+		3: "Deckenlampe Wohnen West",
+		5: "Aussenlicht Ost",
+		6: "Aussenlicht Südwest",
+		7: "Deckenlampe Süd",
+	},
+	34: {
+		0: "Strahler Küche x3",
+		2: "Strahler Küche x5",
+		4: "Aussenlicht Süd",
+	},
+	35: {
+		0: "Deckenlampe Esszimmer",
+		1: "Deckenlampe Küche",
+	},
+}
+
+var cmdMap = map[int]string{
 	104: "status",
 	19:  "switch",
+}
+
+var payloadParserByCommand = map[int]func(src, dst int, payload []byte) string{
+	19:  decodeSwitch,
+	104: decodeStatus,
+}
+
+func defaultPayloadParser(_, _ int, payload []byte) string {
+	return hex.EncodeToString(payload)
 }
 
 func main() {
@@ -58,11 +98,13 @@ func main() {
 				id := pkt.ToString()
 				if v, ok := data[id]; ok {
 					v.times++
+					v.lastSeen = time.Now()
 					data[id] = v
 				} else {
 					data[id] = ds{
 						LcnPacket: *pkt,
 						times:     1,
+						lastSeen:  time.Now(),
 					}
 				}
 			}
@@ -79,8 +121,12 @@ func ui(ctx context.Context, cancel context.CancelFunc) {
 	pterm.DefaultCenter.Printfln(header.Sprintf("LCN Monitor"))
 
 	area, _ := pterm.DefaultArea.WithFullscreen(true).Start()
+
 	go func() {
-		ticker := time.NewTicker(500 * time.Millisecond)
+		const tickerInterval = 500 * time.Millisecond
+
+		ticker := time.NewTicker(tickerInterval)
+
 		for {
 			select {
 			case <-ticker.C:
@@ -88,6 +134,7 @@ func ui(ctx context.Context, cancel context.CancelFunc) {
 				area.Update(pterm.DefaultCenter.Sprint(table))
 			case <-ctx.Done():
 				cancel()
+
 				return
 			}
 		}
@@ -95,30 +142,34 @@ func ui(ctx context.Context, cancel context.CancelFunc) {
 }
 
 func renderData() [][]string {
-	lines := make([][]string, 0, len(data))
+	dataSlice := make([]ds, 0, len(data))
 
-	lineLength := 6
 	for _, v := range data {
+		dataSlice = append(dataSlice, v)
+	}
+
+	slices.SortFunc(dataSlice, func(a, b ds) int {
+		return -a.lastSeen.Compare(b.lastSeen)
+	})
+
+	lines := make([][]string, 0, len(dataSlice))
+
+	lineLength := 7
+	for _, v := range dataSlice {
 		line := make([]string, 0, lineLength)
+		line = append(line, v.lastSeen.Local().Format("2006-01-02 15:04:05 MST"))
 		line = append(line, fmt.Sprintf("%d", v.times))
-		line = append(line, fmt.Sprintf("%d", v.Src))
+		line = append(line, mapIfPossible(idMap, int(v.Src)))
 		line = append(line, fmt.Sprintf("%d", v.Seg))
-		line = append(line, mapIfPossible(dst_map, int(v.Dst)))
-		line = append(line, mapIfPossible(cmd_map, int(v.Cmd)))
-		line = append(line, hex.EncodeToString(v.Payload))
+		line = append(line, mapIfPossible(idMap, int(v.Dst)))
+		line = append(line, mapIfPossible(cmdMap, int(v.Cmd)))
+		line = append(line, parsePayloadIfPossible(int(v.Src), int(v.Dst), int(v.Cmd), v.Payload))
 
 		lines = append(lines, line)
 	}
-	slices.SortFunc(lines, func(a, b []string) int {
-		result := 0
-		for pos := 0; result == 0 && pos < lineLength; pos++ {
-			result = cmp.Compare(a[pos], b[pos])
-		}
-		return -result
-	})
 
 	result := make([][]string, 0, len(lines)+1)
-	result = append(result, []string{"#", "Src", "Seg", "Dst", "Command", "Payload"})
+	result = append(result, []string{"last seen", "#", "Src", "Seg", "Dst", "Command", "Payload"})
 	result = append(result, lines...)
 
 	return result
@@ -130,4 +181,67 @@ func mapIfPossible(m map[int]string, value int) string {
 	}
 
 	return fmt.Sprintf("%d", value)
+}
+
+func mapOutputIfPossible(module int, output int) string {
+	if m, ok := moduleOutputs[module]; ok {
+		if s, ok := m[output]; ok {
+			return s
+		}
+	}
+
+	return fmt.Sprintf("<unnamed> %d", output)
+}
+
+func parsePayloadIfPossible(src, dst, cmd int, payload []byte) string {
+	if f, ok := payloadParserByCommand[cmd]; ok {
+		return f(src, dst, payload)
+	}
+
+	return defaultPayloadParser(src, dst, payload)
+}
+
+func decodeSwitch(src, dst int, payload []byte) string {
+	if m, ok := moduleOutputs[dst]; ok {
+		result := parseOutputOnModule(payload, m, dst)
+
+		if result != "" {
+			return fmt.Sprintf("%s %s", hex.EncodeToString(payload[0:1]), result)
+		}
+	}
+
+	return defaultPayloadParser(src, dst, payload)
+}
+
+func decodeStatus(src, dst int, payload []byte) string {
+	if payload[0] != 0x30 || dst != 4 {
+		return defaultPayloadParser(src, dst, payload)
+	}
+
+	if m, ok := moduleOutputs[src]; ok {
+		result := parseOutputOnModule(payload, m, src)
+
+		if result != "" {
+			return result
+		}
+	}
+
+	return defaultPayloadParser(src, dst, payload)
+}
+
+func parseOutputOnModule(payload []byte, module map[int]string, moduleId int) string {
+	var result string
+
+	for out := 0; out < 8; out++ {
+		if payload[1]&(1<<uint(out)) == 0 {
+			continue
+		}
+
+		if o, ok := module[out]; ok {
+			result = fmt.Sprintf("%s<%s>", result, o)
+		} else {
+			result = fmt.Sprintf("%s<UNKNOWN %d-%d>", result, moduleId, out)
+		}
+	}
+	return result
 }
