@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	ErrIncompleteLcn = errors.New("Incomplete LCN Packet")
-	ErrInvalidLcn    = errors.New("Invalid LCN Packet")
-	ErrInvalidLcnCRC = errors.New("Invalid CRC on LCN Packet")
+	ErrIncompleteLcn = errors.New("incomplete LCN packet")
+	ErrInvalidLcn    = errors.New("invalid LCN packet")
+	ErrInvalidLcnCRC = errors.New("invalid CRC on LCN packet")
 )
 
 type EjectFunc func(packet.Packet)
@@ -29,21 +29,27 @@ type chunker struct {
 
 func (c *chunker) Collect(buf []byte, eject EjectFunc) {
 	reset := func() {
-		c.buffer.Truncate(0)
+		c.buffer.Reset()
 	}
 
+	search := func() {
+		c.buffer.Next(1)
+	}
+
+read_loop:
 	for _, b := range buf {
 		c.buffer.WriteByte(b)
 
-		if c.buffer.Len() >= c.minLength {
+		for c.buffer.Len() >= c.minLength {
 			pkt, err := c.deserializer(c.buffer.Bytes())
 			if err != nil {
 				switch {
 				case errors.Is(err, packet.ErrPacketIncomplete):
-					continue
+					continue read_loop
 				default:
 					log.Errorf("%s 0x%x", err, c.buffer.Bytes())
-					reset()
+					search()
+
 					continue
 				}
 			}
