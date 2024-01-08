@@ -6,22 +6,23 @@ import (
 	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
 )
 
-type PlainPacket []byte
+type Plain []byte
 
 func Deserialize(buf []byte) (packet.Packet, error) {
-	p := make(PlainPacket, len(buf))
+	p := make(Plain, len(buf))
 	copy(p, buf)
+
 	return &p, nil
 }
 
-func (p *PlainPacket) Serialize() ([]byte, error) {
+func (p *Plain) Serialize() ([]byte, error) {
 	return []byte(p.ToString()), nil
 }
 
-func (p *PlainPacket) ToString() string {
+func (p *Plain) ToString() string {
 	return hex.EncodeToString(*p)
 }
 
-func (p *PlainPacket) ToNiceString() string {
+func (p *Plain) ToNiceString() string {
 	return p.ToString()
 }
