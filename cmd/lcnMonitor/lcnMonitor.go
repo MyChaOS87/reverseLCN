@@ -4,13 +4,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/MyChaOS87/reverseLCN.git/internal/cmd"
-	"github.com/MyChaOS87/reverseLCN.git/internal/monitor"
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/lcn"
-	"github.com/MyChaOS87/reverseLCN.git/pkg/broker"
-	"github.com/MyChaOS87/reverseLCN.git/pkg/broker/mqtt"
-	"github.com/MyChaOS87/reverseLCN.git/pkg/broker/null"
-	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
+	"github.com/MyChaOS87/reverseLCN/internal/cmd"
+	"github.com/MyChaOS87/reverseLCN/internal/monitor"
+	"github.com/MyChaOS87/reverseLCN/internal/serial/chunker/lcn"
+	"github.com/MyChaOS87/reverseLCN/pkg/broker"
+	"github.com/MyChaOS87/reverseLCN/pkg/broker/mqtt"
+	"github.com/MyChaOS87/reverseLCN/pkg/broker/null"
+	"github.com/MyChaOS87/reverseLCN/pkg/log"
 )
 
 func main() {

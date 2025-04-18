@@ -3,7 +3,7 @@ package plain
 import (
 	"encoding/hex"
 
-	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
+	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/packet"
 )
 
 type Plain []byte

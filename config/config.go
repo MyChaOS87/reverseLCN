@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
-	loggerConfig "github.com/MyChaOS87/reverseLCN.git/pkg/log/config"
+	loggerConfig "github.com/MyChaOS87/reverseLCN/pkg/log/config"
 )
 
 const (

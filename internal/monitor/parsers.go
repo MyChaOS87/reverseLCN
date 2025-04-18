@@ -22,7 +22,7 @@ func testDigit(b byte, out int) bool {
 	return b&(1<<uint(out)) != 0
 }
 
-func decodeSwitch(src, dst int, payload []byte) string {
+func decodeRelais(_, dst int, payload []byte) string {
 	outputs := make([]string, 0)
 
 	for i := 0; i < 8; i++ {
@@ -47,7 +47,7 @@ func decodeSwitch(src, dst int, payload []byte) string {
 	return strings.Join(outputs, ",")
 }
 
-func decodeStatus(src, dst int, payload []byte) string {
+func decodeStatusReport(src, dst int, payload []byte) string {
 	if payload[0] != 0x30 || dst != 4 {
 		return defaultPayloadParser(src, dst, payload)
 	}
@@ -61,4 +61,29 @@ func decodeStatus(src, dst int, payload []byte) string {
 	}
 
 	return strings.Join(outputs, ",")
+}
+
+func decodeStatusQuery(src, dst int, payload []byte) string {
+	if payload[0] != 0xFB && payload[0] != 0x7b {
+		return defaultPayloadParser(src, dst, payload)
+	}
+
+	var operation string
+	module := src
+	if payload[0] == 0xFB {
+		operation = "QUERY: "
+		module = dst
+	} else if payload[0] == 0x7b {
+		operation = "REPORT: "
+	}
+
+	outputs := make([]string, 0)
+
+	for i := 0; i < 8; i++ {
+		if testDigit(payload[1], i) {
+			outputs = append(outputs, mapOutputIfPossible(module, i))
+		}
+	}
+
+	return operation + strings.Join(outputs, ",")
 }

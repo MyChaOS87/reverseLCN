@@ -3,7 +3,7 @@ package null
 import (
 	"context"
 
-	"github.com/MyChaOS87/reverseLCN.git/pkg/broker"
+	"github.com/MyChaOS87/reverseLCN/pkg/broker"
 )
 
 type (

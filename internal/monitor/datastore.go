@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MyChaOS87/automqttion.git/pkg/log"
-	"github.com/MyChaOS87/reverseLCN.git/internal/serial/chunker/lcn"
+	"github.com/MyChaOS87/reverseLCN/internal/serial/chunker/lcn"
+	"github.com/MyChaOS87/reverseLCN/pkg/log"
 )
 
 type DataStore struct {

@@ -1,8 +1,8 @@
 package serial
 
 import (
-	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
-	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/plain"
+	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/packet"
+	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/plain"
 	"go.bug.st/serial"
 )
 

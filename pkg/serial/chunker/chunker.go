@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
-	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
+	"github.com/MyChaOS87/reverseLCN/pkg/log"
+	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/packet"
 )
 
 var (
@@ -50,7 +50,7 @@ read_loop:
 					log.Errorf("%s 0x%x", err, c.buffer.Bytes())
 					search()
 
-					continue
+					continue read_loop
 				}
 			}
 

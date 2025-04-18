@@ -7,8 +7,8 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
-	"github.com/MyChaOS87/reverseLCN.git/pkg/broker"
-	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
+	"github.com/MyChaOS87/reverseLCN/pkg/broker"
+	"github.com/MyChaOS87/reverseLCN/pkg/log"
 )
 
 var (
