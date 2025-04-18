@@ -37,13 +37,15 @@ var moduleOutputs = map[int]map[int]string{
 }
 
 var cmdMap = map[int]string{
-	104: "status",
-	19:  "switch",
+	0x13: "relais",
+	0x68: "statusReport",
+	0x6E: "statusQuery",
 }
 
 var payloadParserByCommand = map[int]func(src, dst int, payload []byte) string{
-	19:  decodeSwitch,
-	104: decodeStatus,
+	0x13: decodeRelais,
+	0x68: decodeStatusReport,
+	0x6E: decodeStatusQuery,
 }
 
 func mapIfPossible(m map[int]string, value int) string {

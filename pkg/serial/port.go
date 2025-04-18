@@ -6,8 +6,8 @@ import (
 
 	"go.bug.st/serial"
 
-	"github.com/MyChaOS87/reverseLCN.git/pkg/log"
-	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker"
+	"github.com/MyChaOS87/reverseLCN/pkg/log"
+	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker"
 )
 
 const bufferSize = 1024

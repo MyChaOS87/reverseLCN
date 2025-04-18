@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker"
-	"github.com/MyChaOS87/reverseLCN.git/pkg/serial/chunker/packet"
+	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker"
+	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/packet"
 )
 
 type ejectExpectation struct {

@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/MyChaOS87/reverseLCN.git/config"
-	logger "github.com/MyChaOS87/reverseLCN.git/pkg/log"
+	"github.com/MyChaOS87/reverseLCN/config"
+	logger "github.com/MyChaOS87/reverseLCN/pkg/log"
 )
 
 const (

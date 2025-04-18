@@ -3,7 +3,7 @@ package log
 import (
 	"go.uber.org/zap/zapcore"
 
-	"github.com/MyChaOS87/reverseLCN.git/pkg/log/config"
+	"github.com/MyChaOS87/reverseLCN/pkg/log/config"
 )
 
 //nolint:gochecknoglobals
