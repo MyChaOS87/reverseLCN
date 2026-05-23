@@ -1,4 +1,3 @@
-//nolint:gochecknoglobals
 package main
 
 import (
@@ -32,8 +31,8 @@ func main() {
 	broker.Topic(fmt.Sprintf(
 		"%s/#",
 		cfg.Mqtt.RootTopic)).
-		Subscribe(lcn.LcnPacket{}, func(_ string, in interface{}) {
-			if pkt, ok := in.(*lcn.LcnPacket); ok {
+		Subscribe(lcn.Packet{}, func(_ string, in interface{}) {
+			if pkt, ok := in.(*lcn.Packet); ok {
 				dataStore.Add(*pkt)
 			}
 		})

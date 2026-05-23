@@ -1,9 +1,10 @@
 package serial
 
 import (
+	"go.bug.st/serial"
+
 	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/packet"
 	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/plain"
-	"go.bug.st/serial"
 )
 
 type (
@@ -63,9 +64,11 @@ func MinLength(minLength int) Option {
 
 func newDefaultConfig() *Config {
 	return &Config{
-		portName:     "/dev/ttyACM0",
-		baudRate:     9600,
-		parity:       serial.NoParity,
+		portName: "/dev/ttyACM0",
+		//nolint:mnd
+		baudRate: 9600,
+		parity:   serial.NoParity,
+		//nolint:mnd
 		dataBits:     8,
 		stopBits:     serial.OneStopBit,
 		deserializer: plain.Deserialize,
