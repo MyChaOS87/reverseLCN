@@ -1,3 +1,5 @@
+export GOWORK=off
+
 .PHONY: all test lint tidy tools-update tools-tidy upgrade-direct-dependencies build github-actions-test docker-build
 
 all: tidy build lint test
@@ -21,10 +23,6 @@ github-actions-test:
 docker-build:
 	docker build -t lcn2mqtt -f build/lcn2mqtt/Dockerfile .
 
-
-
-
-
 tools-update:
 	for d in tools/* ; do \
 		if [ -d $$d ] && [ -f $$d/go.mod ] ; then \
@@ -47,5 +45,6 @@ tools-tidy:
 	done
 
 upgrade-direct-dependencies:
-	go get -u ./...
+	echo "Upgrading direct dependencies..."
+	go get -u $$(go list -m -f '{{if and (not .Indirect) (not .Main)}}{{.Path}}@latest{{end}}' all)
 	go mod tidy
