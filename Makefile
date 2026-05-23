@@ -1,4 +1,4 @@
-.PHONY: all test lint tidy tools-update tools-tidy upgrade-direct-dependencies build github-actions-test
+.PHONY: all test lint tidy tools-update tools-tidy upgrade-direct-dependencies build github-actions-test docker-build
 
 all: tidy build lint test
 
@@ -17,6 +17,10 @@ tidy:
 
 github-actions-test:
 	go tool -modfile=tools/act/go.mod act -j test-and-build --artifact-server-path ~/.act/artifacts
+
+docker-build:
+	docker build -t lcn2mqtt -f build/lcn2mqtt/Dockerfile .
+
 
 
 
