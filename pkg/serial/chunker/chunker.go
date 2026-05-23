@@ -50,7 +50,7 @@ read_loop:
 					log.Errorf("%s 0x%x", err, c.buffer.Bytes())
 					search()
 
-					continue read_loop
+					continue
 				}
 			}
 

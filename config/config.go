@@ -1,10 +1,11 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
 	loggerConfig "github.com/MyChaOS87/reverseLCN/pkg/log/config"
@@ -13,6 +14,8 @@ import (
 const (
 	envPrefix = "LCN"
 )
+
+var ErrConfigFileNotFound = errors.New("config file not found")
 
 type SerialConfig struct {
 	Port     string
@@ -45,11 +48,12 @@ func LoadConfig(filename string) (*viper.Viper, error) {
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
-		if ok := errors.As(err, &viper.ConfigFileNotFoundError{}); ok {
-			return nil, errors.New("config file not found")
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
+			return nil, ErrConfigFileNotFound
 		}
 
-		return nil, errors.Wrap(err, "failed to read config")
+		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
 	return v, nil
@@ -62,7 +66,7 @@ func ParseConfig(v *viper.Viper) (*Config, error) {
 	if err := v.Unmarshal(&c); err != nil {
 		log.Printf("unable to decode into struct, %v", err)
 
-		return nil, errors.Wrap(err, "failed to parse config")
+		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
 	return &c, nil

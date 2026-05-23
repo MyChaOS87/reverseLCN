@@ -1,0 +1,127 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - asciicheck
+    - bodyclose
+    - copyloopvar
+    - cyclop
+    - depguard
+    - dogsled
+    - dupl
+    - durationcheck
+    - err113
+    - errcheck
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goheader
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - govet
+    - importas
+    - ineffassign
+    - lll
+    - makezero
+    - misspell
+    - mnd
+    - nakedret
+    - nestif
+    - nilerr
+    - nlreturn
+    - noctx
+    - nolintlint
+    - paralleltest
+    - prealloc
+    - predeclared
+    - revive
+    - rowserrcheck
+    - sloglint
+    - sqlclosecheck
+    - staticcheck
+    - testpackage
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - wastedassign
+    - whitespace
+    - wrapcheck
+    - wsl_v5
+  settings:
+    depguard:
+      rules:
+        pkg-dependencies:
+          list-mode: lax
+          files:
+            - "**/pkg/**"
+          deny:
+            - pkg: "github.com/MyChaOS87/reverseLCN/cmd"
+              desc: "pkg is forbidden to use /cmd packages"
+            - pkg: "github.com/MyChaOS87/reverseLCN/config"
+              desc: "pkg is forbidden to use /config packages"
+            - pkg: "github.com/MyChaOS87/reverseLCN/internal"
+              desc: "pkg is forbidden to use /internal packages"
+    lll:
+      line-length: 125
+    sloglint:
+      context: all
+      key-naming-case: snake
+      args-on-sep-lines: true
+    staticcheck:
+      checks:
+        - all
+    mnd:
+      ignored-numbers:
+        - "2"
+        - "0o600"
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - errcheck
+          - funlen
+          - gocyclo
+          - gosec
+          - wrapcheck
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/MyChaOS87/reverseLCN)
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

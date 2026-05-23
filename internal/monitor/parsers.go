@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+const (
+	cmdStatusQuery  = 0xFB
+	cmdStatusReport = 0x7b
+)
+
 func defaultPayloadParser(_, _ int, payload []byte) string {
 	return hex.EncodeToString(payload)
 }
@@ -19,7 +24,11 @@ func parsePayloadIfPossible(src, dst, cmd int, payload []byte) string {
 }
 
 func testDigit(b byte, out int) bool {
-	return b&(1<<uint(out)) != 0
+	if out < 0 || out >= 8 {
+		return false
+	}
+
+	return b&(1<<out) != 0
 }
 
 func decodeRelais(_, dst int, payload []byte) string {
@@ -64,16 +73,18 @@ func decodeStatusReport(src, dst int, payload []byte) string {
 }
 
 func decodeStatusQuery(src, dst int, payload []byte) string {
-	if payload[0] != 0xFB && payload[0] != 0x7b {
+	if payload[0] != cmdStatusQuery && payload[0] != cmdStatusReport {
 		return defaultPayloadParser(src, dst, payload)
 	}
 
-	var operation string
+	operation := ""
 	module := src
-	if payload[0] == 0xFB {
+
+	switch payload[0] {
+	case cmdStatusQuery:
 		operation = "QUERY: "
 		module = dst
-	} else if payload[0] == 0x7b {
+	case cmdStatusReport:
 		operation = "REPORT: "
 	}
 

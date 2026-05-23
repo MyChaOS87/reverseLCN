@@ -84,7 +84,6 @@ func testDeserialize(buf []byte) (packet.Packet, error) {
 
 var _ packet.Deserializer = testDeserialize
 
-//nolint:funlen
 func TestChunkerCollect(t *testing.T) {
 	t.Parallel()
 
@@ -137,7 +136,6 @@ func TestChunkerCollect(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(fmt.Sprintf("%s_%s", t.Name(), tt.name), func(t *testing.T) {
 			t.Parallel()
 

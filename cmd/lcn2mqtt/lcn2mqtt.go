@@ -35,7 +35,7 @@ func main() {
 	port.Run(ctx, cancel, func(pkt packet.Packet) {
 		log.Infof("%s", pkt.ToNiceString())
 
-		if lcn, ok := pkt.(*lcn.LcnPacket); ok {
+		if lcn, ok := pkt.(*lcn.Packet); ok {
 			broker.
 				Topic(
 					fmt.Sprintf("%s/segment/%d/target/%d/",
@@ -52,9 +52,10 @@ func main() {
 		fmt.Sprintf(
 			"%s/in",
 			cfg.Mqtt.RootTopic)).
-		Subscribe(lcn.LcnPacket{}, func(_ string, data interface{}) {
-			if pkt, ok := data.(*lcn.LcnPacket); ok {
+		Subscribe(lcn.Packet{}, func(_ string, data interface{}) {
+			if pkt, ok := data.(*lcn.Packet); ok {
 				log.Infof("MQTT callback got LCN: %s", pkt.ToNiceString())
+
 				buf, err := pkt.Serialize()
 				if err != nil {
 					log.Error("Could not Serialize LCN: %s", pkt.ToNiceString())

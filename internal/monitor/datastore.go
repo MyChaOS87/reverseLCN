@@ -17,37 +17,36 @@ type DataStore struct {
 }
 
 type message struct {
-	lcn.LcnPacket
+	lcn.Packet
 	lastSeen time.Time
 	times    int
 }
 
-func (d *DataStore) Add(pkt lcn.LcnPacket) {
+func (d *DataStore) Add(pkt lcn.Packet) {
 	now := time.Now()
 
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	{
 
-		key := pkt.ToString()
-		if v, ok := d.messages[key]; ok {
-			v.Update(now)
+	key := pkt.ToString()
+	if v, ok := d.messages[key]; ok {
+		v.update(now)
 
-			log.Infof("UPD: %s", v.ToString())
-		} else {
-			m := message{
-				LcnPacket: pkt,
-				lastSeen:  now,
-				times:     1,
-			}
-			d.messages[key] = &m
-
-			log.Infof("ADD: %s", m.ToString())
+		log.Infof("UPD: %s", v.toString())
+	} else {
+		m := message{
+			Packet:   pkt,
+			lastSeen: now,
+			times:    1,
 		}
+		d.messages[key] = &m
+
+		log.Infof("ADD: %s", m.toString())
 	}
 }
 
-func (d *DataStore) GetLast(n int) []message {
+//nolint:unused
+func (d *DataStore) getLast(n int) []message {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -60,15 +59,15 @@ func (d *DataStore) GetLast(n int) []message {
 		return -a.lastSeen.Compare(b.lastSeen)
 	})
 
-	return result[:n]
+	return result[:min(n, len(result))]
 }
 
-func (m *message) Update(lastSeen time.Time) {
+func (m *message) update(lastSeen time.Time) {
 	m.lastSeen = lastSeen
 	m.times++
 }
 
-func (m *message) ToString() string {
+func (m *message) toString() string {
 	const lineLength = 7
 
 	line := make([]string, 0, lineLength)
