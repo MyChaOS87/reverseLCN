@@ -84,35 +84,6 @@ Protocol bridges and binary serial chunkers must be tested through **output-orie
 
 The following testing and architectural backlog items are tracked for `reverseLCN`:
 
-### Item #13: Refactor `chunker_test.go` to Eliminate `testify/mock`
-- **Location**: [`pkg/serial/chunker/chunker_test.go`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/chunker_test.go)
-- **Problem**: The current test uses `ejectMock` with `mock.Mock` to verify packet emission counts and arguments.
-- **Resolution**: Replace `ejectMock` and `ejectExpectation` with a simple slice-accumulation closure:
-  ```go
-  var ejected []packet.Packet
-  eject := func(p packet.Packet) {
-      ejected = append(ejected, p)
-  }
-  c.Collect(buf, eject)
-  assert.Equal(t, tt.expectedPackets, ejected)
-  ```
-  This adheres to output-oriented testing and eliminates mock boilerplate.
-
-### Item #14: Negative Checksum & Oversize Cases in `lcn_test.go`
-- **Location**: [`internal/serial/chunker/lcn/lcn_test.go`](file:///home/kasch/projects/go/reverseLCN/internal/serial/chunker/lcn/lcn_test.go)
-- **Problem**: Current tests cover incomplete lengths and synthetic/real positive cases, but lack negative test vectors.
-- **Resolution**: Add explicit table test cases verifying:
-  - Corrupted checksum byte returns `lcn.ErrLcnPacketInvalidChecksum`.
-  - Buffer with length exceeding the expected length derived from `Info` returns `lcn.ErrLcnPacketInvalid`.
-  - Invalid `Info` length code bits.
-
-### Item #15: Short-Payload Bounds Guard & Unit Tests in `internal/monitor`
-- **Location**: [`internal/monitor/parsers.go`](file:///home/kasch/projects/go/reverseLCN/internal/monitor/parsers.go)
-- **Problem**: [`decodeRelais`](file:///home/kasch/projects/go/reverseLCN/internal/monitor/parsers.go#L34), [`decodeStatusReport`](file:///home/kasch/projects/go/reverseLCN/internal/monitor/parsers.go#L59), and [`decodeStatusQuery`](file:///home/kasch/projects/go/reverseLCN/internal/monitor/parsers.go#L75) unconditionally index `payload[0]` and `payload[1]` without checking `len(payload)`. If a packet arrives with fewer than 2 payload bytes (or empty payload), the process panics with an index out of range error.
-- **Resolution**:
-  - Add length guards `if len(payload) < 2 { return defaultPayloadParser(...) }` at the head of each decoder function.
-  - Create comprehensive tabular unit tests in `internal/monitor/parsers_test.go` and `internal/monitor/datastore_test.go` covering normal, boundary, and short payloads.
-
 ### Item #16: `Plain.Serialize` Symmetry & Core Package Coverage
 - **Location**: [`pkg/serial/chunker/plain/plain.go`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/plain/plain.go#L18)
 - **Problem**: [`Plain.Serialize()`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/plain/plain.go#L18) returns `[]byte(p.ToString())` (the ASCII hex characters) instead of the underlying raw bytes `[]byte(*p)`. This breaks round-trip symmetry (`Deserialize` -> `Serialize`).

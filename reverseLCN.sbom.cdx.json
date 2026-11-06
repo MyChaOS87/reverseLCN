@@ -1297,59 +1297,6 @@
       ]
     },
     {
-      "bom-ref": "pkg:golang/github.com/stretchr/objx@v0.5.3?package-id=1ca22c3c5bfc112b",
-      "type": "library",
-      "name": "github.com/stretchr/objx",
-      "version": "v0.5.3",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "cpe": "cpe:2.3:a:stretchr:objx:v0.5.3:*:*:*:*:*:*:*",
-      "purl": "pkg:golang/github.com/stretchr/objx@v0.5.3",
-      "properties": [
-        {
-          "name": "syft:package:foundBy",
-          "value": "go-module-file-cataloger"
-        },
-        {
-          "name": "syft:package:language",
-          "value": "go"
-        },
-        {
-          "name": "syft:package:type",
-          "value": "go-module"
-        },
-        {
-          "name": "syft:package:metadataType",
-          "value": "go-source-entry"
-        },
-        {
-          "name": "syft:location:0:path",
-          "value": "go.mod"
-        },
-        {
-          "name": "syft:metadata:architecture",
-          "value": "amd64"
-        },
-        {
-          "name": "syft:metadata:cgoEnabled",
-          "value": "true"
-        },
-        {
-          "name": "syft:metadata:h1Digest",
-          "value": "h1:jmXUvGomnU1o3W/V5h2VEradbpJDwGrzugQQvL0POH4="
-        },
-        {
-          "name": "syft:metadata:os",
-          "value": "linux"
-        }
-      ]
-    },
-    {
       "bom-ref": "pkg:golang/github.com/stretchr/testify@v1.12.1?package-id=740d0c4d6a68c27d",
       "type": "library",
       "name": "github.com/stretchr/testify",
@@ -2030,11 +1977,11 @@
       "hashes": [
         {
           "alg": "SHA-1",
-          "content": "24d7224f93fe75f66199dd7b09d713f57b0cd592"
+          "content": "8146c6e43021851e11095c0f7a5aff69a807bdc7"
         },
         {
           "alg": "SHA-256",
-          "content": "89040785f8ff48dcc1ccdfb37d61ebf099d3f2b5966dd8659cfebf97346b6fb9"
+          "content": "58db63a4cd4c9ff062a47c15164e91bb4b880f7393b4c3a486b275eeb730e06f"
         }
       ]
     }
@@ -2114,7 +2061,6 @@
     {
       "ref": "pkg:golang/github.com/stretchr/testify@v1.12.1?package-id=740d0c4d6a68c27d",
       "dependsOn": [
-        "pkg:golang/github.com/stretchr/objx@v0.5.3?package-id=1ca22c3c5bfc112b",
         "pkg:golang/go.yaml.in/yaml/v3@v3.0.6?package-id=c01a23f11821b1e8"
       ]
     },

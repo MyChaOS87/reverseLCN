@@ -31,7 +31,11 @@ func testDigit(b byte, out int) bool {
 	return b&(1<<out) != 0
 }
 
-func decodeRelais(_, dst int, payload []byte) string {
+func decodeRelais(src, dst int, payload []byte) string {
+	if len(payload) < 2 {
+		return defaultPayloadParser(src, dst, payload)
+	}
+
 	outputs := make([]string, 0)
 
 	for i := range 8 {
@@ -57,6 +61,10 @@ func decodeRelais(_, dst int, payload []byte) string {
 }
 
 func decodeStatusReport(src, dst int, payload []byte) string {
+	if len(payload) < 2 {
+		return defaultPayloadParser(src, dst, payload)
+	}
+
 	if payload[0] != 0x30 || dst != 4 {
 		return defaultPayloadParser(src, dst, payload)
 	}
@@ -73,6 +81,10 @@ func decodeStatusReport(src, dst int, payload []byte) string {
 }
 
 func decodeStatusQuery(src, dst int, payload []byte) string {
+	if len(payload) < 2 {
+		return defaultPayloadParser(src, dst, payload)
+	}
+
 	if payload[0] != cmdStatusQuery && payload[0] != cmdStatusReport {
 		return defaultPayloadParser(src, dst, payload)
 	}

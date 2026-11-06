@@ -46,7 +46,6 @@ func (d *DataStore) Add(pkt lcn.Packet) {
 	}
 }
 
-//nolint:unused
 func (d *DataStore) getLast(n int) []message {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()

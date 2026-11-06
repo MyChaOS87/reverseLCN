@@ -97,6 +97,39 @@ func TestDeserialize(t *testing.T) {
 				Payload: []uint8{0x1, 0x0, 0x5, 0x38, 0x13, 0x3, 0xb, 0x17, 0x5, 0x3c, 0x0, 0x0, 0x1, 0x41},
 			},
 		},
+		{
+			name:  "corrupted checksum length 6",
+			input: []byte{0x80, 0x00, 0xd4, 0x2, 0x4, 0x5},
+			error: lcn.ErrLcnPacketInvalidChecksum,
+		},
+		{
+			name:  "corrupted checksum length 8",
+			input: []byte{0xa8, 0x06, 0x00, 0x00, 0x04, 0x68, 0x30, 0x00},
+			error: lcn.ErrLcnPacketInvalidChecksum,
+		},
+		{
+			name:  "oversized buffer length 6",
+			input: []byte{0x80, 0x00, 0xd5, 0x2, 0x4, 0x5, 0x99},
+			error: lcn.ErrLcnPacketInvalid,
+		},
+		{
+			name:  "oversized buffer length 8",
+			input: []byte{0x80, 0b01 << 2, 0x15, 0x2, 0x4, 0x5, 0x06, 0x07, 0x99},
+			error: lcn.ErrLcnPacketInvalid,
+		},
+		{
+			name:  "oversized buffer length 12",
+			input: []byte{0x80, 0b10 << 2, 0x26, 0x2, 0x4, 0x5, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x99},
+			error: lcn.ErrLcnPacketInvalid,
+		},
+		{
+			name: "oversized buffer length 20",
+			input: []byte{
+				0x80, 0b11 << 2, 0x41, 0x2, 0x4, 0x5, 0x06, 0x07, 0x08, 0x09,
+				0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x99,
+			},
+			error: lcn.ErrLcnPacketInvalid,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s_%s", t.Name(), tt.name), func(t *testing.T) {
@@ -185,6 +218,116 @@ func TestSerialize(t *testing.T) {
 				require.ErrorIs(t, err, tt.error)
 				assert.Nil(t, output)
 			}
+		})
+	}
+}
+
+func TestRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *lcn.Packet
+		expected *lcn.Packet
+	}{
+		{
+			name:     "frame length 6",
+			input:    &lcn.Packet{Src: 1, Info: 0x00, Seg: 2, Dst: 4, Cmd: 5, Payload: []byte{}},
+			expected: &lcn.Packet{Src: 1, Info: 0x00, Checksum: 0xd5, Seg: 2, Dst: 4, Cmd: 5, Payload: []byte{}},
+		},
+		{
+			name: "frame length 8",
+			input: &lcn.Packet{
+				Src: 0x15, Info: 0x02, Seg: 0x00, Dst: 0x04, Cmd: 0x68,
+				Payload: []byte{0x30, 0x00},
+			},
+			expected: &lcn.Packet{
+				Src: 0x15, Info: 0x06, Checksum: 0x75, Seg: 0x00, Dst: 0x04, Cmd: 0x68,
+				Payload: []byte{0x30, 0x00},
+			},
+		},
+		{
+			name: "frame length 12",
+			input: &lcn.Packet{
+				Src: 1, Info: 0x00, Seg: 2, Dst: 4, Cmd: 5,
+				Payload: []byte{6, 7, 8, 9, 10, 11},
+			},
+			expected: &lcn.Packet{
+				Src: 1, Info: 0b10 << 2, Checksum: 0x26, Seg: 2, Dst: 4, Cmd: 5,
+				Payload: []byte{6, 7, 8, 9, 10, 11},
+			},
+		},
+		{
+			name: "frame length 20",
+			input: &lcn.Packet{
+				Src: 0x1f, Info: 0x42, Seg: 0x04, Dst: 0x04, Cmd: 0x22,
+				Payload: []byte{0x01, 0x00, 0x05, 0x38, 0x13, 0x03, 0x0b, 0x17, 0x05, 0x3c, 0x00, 0x00, 0x01, 0x41},
+			},
+			expected: &lcn.Packet{
+				Src: 0x1f, Info: 0x4e, Checksum: 0x66, Seg: 0x04, Dst: 0x04, Cmd: 0x22,
+				Payload: []byte{0x01, 0x00, 0x05, 0x38, 0x13, 0x03, 0x0b, 0x17, 0x05, 0x3c, 0x00, 0x00, 0x01, 0x41},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s_%s", t.Name(), tt.name), func(t *testing.T) {
+			t.Parallel()
+
+			raw, err := tt.input.Serialize()
+			require.NoError(t, err)
+
+			got, err := lcn.Deserialize(raw)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestPacketFormatting(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		packet       *lcn.Packet
+		expectedStr  string
+		expectedNice string
+	}{
+		{
+			name: "empty payload length 6",
+			packet: &lcn.Packet{
+				Src: 0x01, Info: 0x00, Checksum: 0xd5, Seg: 0x02, Dst: 0x04, Cmd: 0x05,
+				Payload: []byte{},
+			},
+			expectedStr:  "src: 1, info: 0, crc: d5, seg: 2, dst: 4, cmd: 5, payload: ",
+			expectedNice: " 1-> 2: 4 cmd:  5, payload: ",
+		},
+		{
+			name: "status report length 8",
+			packet: &lcn.Packet{
+				Src: 0x15, Info: 0x06, Checksum: 0x75, Seg: 0x00, Dst: 0x04, Cmd: 0x68,
+				Payload: []byte{0x30, 0x00},
+			},
+			expectedStr:  "src: 15, info: 6, crc: 75, seg: 0, dst: 4, cmd: 68, payload: 3000",
+			expectedNice: "15-> 0: 4 cmd: 68, payload: 3000",
+		},
+		{
+			name: "multi-byte payload length 20",
+			packet: &lcn.Packet{
+				Src: 0x1f, Info: 0x4e, Checksum: 0x66, Seg: 0x04, Dst: 0x04, Cmd: 0x22,
+				Payload: []byte{0x01, 0x00, 0x05, 0x38, 0x13, 0x03, 0x0b, 0x17, 0x05, 0x3c, 0x00, 0x00, 0x01, 0x41},
+			},
+			expectedStr:  "src: 1f, info: 4e, crc: 66, seg: 4, dst: 4, cmd: 22, payload: 0100053813030b17053c00000141",
+			expectedNice: "1f-> 4: 4 cmd: 22, payload: 0100053813030b17053c00000141",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s_%s", t.Name(), tt.name), func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expectedStr, tt.packet.ToString())
+			assert.Equal(t, tt.expectedNice, tt.packet.ToNiceString())
 		})
 	}
 }
