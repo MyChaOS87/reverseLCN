@@ -1,6 +1,6 @@
 module github.com/mychaos87/mycelium/tools/grype
 
-go 1.27
+go 1.27.0
 
 tool github.com/anchore/grype/cmd/grype
 
