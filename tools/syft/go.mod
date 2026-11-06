@@ -1,6 +1,6 @@
 module github.com/mychaos87/mycelium/tools/syft
 
-go 1.27
+go 1.27.0
 
 tool github.com/anchore/syft/cmd/syft
 
