@@ -4,33 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker"
 	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/packet"
 )
-
-type ejectExpectation struct {
-	add func(e *ejectMock) int
-}
-
-type ejectMock struct {
-	mock.Mock
-}
-
-func (e *ejectMock) eject(p packet.Packet) {
-	e.Called(p)
-}
-
-func onEject(p packet.Packet, times int) ejectExpectation {
-	return ejectExpectation{
-		add: func(e *ejectMock) int {
-			e.On("eject", p).Times(times)
-
-			return times
-		},
-	}
-}
 
 // test packet has a min length of 2 and max length of 3
 // valid first byte is packet length, rest needs to be same as first byte.
@@ -88,50 +66,52 @@ func TestChunkerCollect(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name              string
-		buffers           [][]byte
-		ejectExpectations []ejectExpectation
+		name     string
+		buffers  [][]byte
+		expected []packet.Packet
 	}{
 		{
-			name:              "nothing",
-			buffers:           [][]byte{},
-			ejectExpectations: []ejectExpectation{},
+			name:     "nothing",
+			buffers:  [][]byte{},
+			expected: nil,
 		},
 		{
 			name:    "simple",
 			buffers: [][]byte{{2, 2}},
-			ejectExpectations: []ejectExpectation{
-				onEject(&testPacket{2, 2}, 1),
+			expected: []packet.Packet{
+				&testPacket{2, 2},
 			},
 		},
 		{
 			name:    "simple * 2",
 			buffers: [][]byte{{2, 2}, {2, 2}},
-			ejectExpectations: []ejectExpectation{
-				onEject(&testPacket{2, 2}, 2),
+			expected: []packet.Packet{
+				&testPacket{2, 2},
+				&testPacket{2, 2},
 			},
 		},
 		{
 			name:    "simple partial",
 			buffers: [][]byte{{2}, {2}},
-			ejectExpectations: []ejectExpectation{
-				onEject(&testPacket{2, 2}, 1),
+			expected: []packet.Packet{
+				&testPacket{2, 2},
 			},
 		},
 		{
 			name:    "simple partial + top level bs..",
 			buffers: [][]byte{{2}, {2}, {4, 4}, {3, 3}, {3}},
-			ejectExpectations: []ejectExpectation{
-				onEject(&testPacket{2, 2}, 1),
-				onEject(&testPacket{3, 3, 3}, 1),
+			expected: []packet.Packet{
+				&testPacket{2, 2},
+				&testPacket{3, 3, 3},
 			},
 		},
 		{
 			name:    "wrong package search for valid one",
 			buffers: [][]byte{{2}, {2}, {4, 4}, {3, 3}, {2}, {2}, {3, 3, 3}},
-			ejectExpectations: []ejectExpectation{
-				onEject(&testPacket{2, 2}, 2),
-				onEject(&testPacket{3, 3, 3}, 1),
+			expected: []packet.Packet{
+				&testPacket{2, 2},
+				&testPacket{2, 2},
+				&testPacket{3, 3, 3},
 			},
 		},
 	}
@@ -141,19 +121,15 @@ func TestChunkerCollect(t *testing.T) {
 
 			c := chunker.NewChunker(testDeserialize, 2)
 
-			e := new(ejectMock)
-
-			expectedEjectCalls := 0
-			for _, ejectExpectation := range tt.ejectExpectations {
-				expectedEjectCalls += ejectExpectation.add(e)
-			}
+			var got []packet.Packet
 
 			for _, buf := range tt.buffers {
-				c.Collect(buf, e.eject)
+				c.Collect(buf, func(p packet.Packet) {
+					got = append(got, p)
+				})
 			}
 
-			e.AssertExpectations(t)
-			e.AssertNumberOfCalls(t, "eject", expectedEjectCalls)
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 }
