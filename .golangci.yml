@@ -2,60 +2,82 @@ version: "2"
 linters:
   default: none
   enable:
+    - asasalint
     - asciicheck
+    - bidichk
     - bodyclose
+    - canonicalheader
+    - containedctx
     - copyloopvar
     - cyclop
     - depguard
     - dogsled
     - dupl
     - durationcheck
+    - embeddedstructfieldcheck
     - err113
+    - errchkjson
     - errcheck
+    - errname
     - errorlint
     - exhaustive
+    - exptostd
     - forbidigo
     - forcetypeassert
     - funlen
+    - gocheckcompilerdirectives
     - gochecknoglobals
     - gochecknoinits
     - gocognit
     - goconst
     - gocritic
     - gocyclo
+    - godoclint
     - godot
     - godox
     - goheader
-    - gomodguard
+    - gomodguard_v2
     - goprintffuncname
     - gosec
     - govet
     - importas
     - ineffassign
+    - intrange
     - lll
+    - loggercheck
     - makezero
+    - mirror
     - misspell
     - mnd
+    - musttag
     - nakedret
     - nestif
     - nilerr
-    - nlreturn
     - noctx
     - nolintlint
+    - nosprintfhostport
     - paralleltest
     - prealloc
     - predeclared
+    - reassign
+    - recvcheck
     - revive
     - rowserrcheck
     - sloglint
+    - spancheck
     - sqlclosecheck
     - staticcheck
+    - tagalign
+    - testableexamples
+    - testifylint
     - testpackage
     - thelper
     - tparallel
     - unconvert
     - unparam
     - unused
+    - usestdlibvars
+    - usetesting
     - wastedassign
     - whitespace
     - wrapcheck
@@ -74,8 +96,25 @@ linters:
               desc: "pkg is forbidden to use /config packages"
             - pkg: "github.com/MyChaOS87/reverseLCN/internal"
               desc: "pkg is forbidden to use /internal packages"
+    goconst:
+      ignore-tests: true
+    gomodguard_v2:
+      blocked:
+        - module: github.com/pkg/errors
+          recommendations:
+            - errors
+          reason: "github.com/pkg/errors is forbidden use errors package from stdlib"
+        - module: github.com/google/uuid
+          recommendations:
+            - uuid
+          reason: "github.com/google/uuid is forbidden use stdlib uuid package in Go 1.27"
     lll:
       line-length: 125
+    mnd:
+      ignored-numbers:
+        - "2"
+        - "8"
+        - "0o600"
     sloglint:
       context: all
       key-naming-case: snake
@@ -83,10 +122,14 @@ linters:
     staticcheck:
       checks:
         - all
-    mnd:
-      ignored-numbers:
-        - "2"
-        - "0o600"
+    usetesting:
+      context-background: true
+      context-todo: true
+      os-chdir: true
+      os-mkdir-temp: true
+      os-setenv: true
+      os-create-temp: true
+      os-temp-dir: true
   exclusions:
     generated: lax
     presets:
@@ -107,6 +150,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - mocks/
 formatters:
   enable:
     - gci
@@ -125,3 +169,4 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      - mocks$

@@ -66,7 +66,7 @@ func (t *mqttTopic) PublishString(s string) {
 	t.publishInternal(s)
 }
 
-func (t *mqttTopic) Publish(data interface{}) {
+func (t *mqttTopic) Publish(data any) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		log.Errorf("Error on Publish, cannot marshal JSON: %s", err)
@@ -77,7 +77,7 @@ func (t *mqttTopic) Publish(data interface{}) {
 	t.publishInternal(string(b))
 }
 
-func (t *mqttTopic) Subscribe(hint interface{}, callback broker.CallbackFunction) {
+func (t *mqttTopic) Subscribe(hint any, callback broker.CallbackFunction) {
 	internalCallback := func(_ mqtt.Client, message mqtt.Message) {
 		log.Debugf("got MQTT message: %s", message.Payload())
 

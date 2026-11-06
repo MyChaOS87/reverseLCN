@@ -68,7 +68,7 @@ func newDefaultConfig() *Config {
 		//nolint:mnd
 		baudRate: 9600,
 		parity:   serial.NoParity,
-		//nolint:mnd
+
 		dataBits:     8,
 		stopBits:     serial.OneStopBit,
 		deserializer: plain.Deserialize,

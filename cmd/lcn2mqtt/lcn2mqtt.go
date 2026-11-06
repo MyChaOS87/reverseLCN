@@ -52,7 +52,7 @@ func main() {
 		fmt.Sprintf(
 			"%s/in",
 			cfg.Mqtt.RootTopic)).
-		Subscribe(lcn.Packet{}, func(_ string, data interface{}) {
+		Subscribe(lcn.Packet{}, func(_ string, data any) {
 			if pkt, ok := data.(*lcn.Packet); ok {
 				log.Infof("MQTT callback got LCN: %s", pkt.ToNiceString())
 

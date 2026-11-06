@@ -34,7 +34,7 @@ func testDigit(b byte, out int) bool {
 func decodeRelais(_, dst int, payload []byte) string {
 	outputs := make([]string, 0)
 
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		bitPositions := payload[0] | payload[1]
 
 		if testDigit(bitPositions, i) {
@@ -63,7 +63,7 @@ func decodeStatusReport(src, dst int, payload []byte) string {
 
 	outputs := make([]string, 0)
 
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		if testDigit(payload[1], i) {
 			outputs = append(outputs, mapOutputIfPossible(src, i))
 		}
@@ -90,7 +90,7 @@ func decodeStatusQuery(src, dst int, payload []byte) string {
 
 	outputs := make([]string, 0)
 
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		if testDigit(payload[1], i) {
 			outputs = append(outputs, mapOutputIfPossible(module, i))
 		}

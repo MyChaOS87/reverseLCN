@@ -9,8 +9,8 @@ type Broker interface {
 
 type Topic interface {
 	PublishString(s string)
-	Publish(i interface{})
-	Subscribe(hint interface{}, callback CallbackFunction)
+	Publish(i any)
+	Subscribe(hint any, callback CallbackFunction)
 }
 
-type CallbackFunction func(topic string, data interface{})
+type CallbackFunction func(topic string, data any)

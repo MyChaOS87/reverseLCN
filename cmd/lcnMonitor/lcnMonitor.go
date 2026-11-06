@@ -31,7 +31,7 @@ func main() {
 	broker.Topic(fmt.Sprintf(
 		"%s/#",
 		cfg.Mqtt.RootTopic)).
-		Subscribe(lcn.Packet{}, func(_ string, in interface{}) {
+		Subscribe(lcn.Packet{}, func(_ string, in any) {
 			if pkt, ok := in.(*lcn.Packet); ok {
 				dataStore.Add(*pkt)
 			}
