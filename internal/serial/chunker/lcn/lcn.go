@@ -111,7 +111,7 @@ func Deserialize(buf []byte) (packet.Packet, error) {
 	return lcn, nil
 }
 
-// this function sets checksum and length information by itself.
+// Serialize encodes the packet and sets checksum and length information by itself.
 func (lcn *Packet) Serialize() ([]byte, error) {
 	bufLen := minLcnPacketLength + len(lcn.Payload)
 	buf := make([]byte, bufLen)
@@ -148,7 +148,7 @@ func (lcn *Packet) ToNiceString() string {
 func mirrorSrc(in byte) byte {
 	src := byte(0)
 
-	for p := 0; p < 8; p++ {
+	for p := range 8 {
 		src <<= 1
 		src += (in & (1 << p) >> p)
 	}
@@ -172,7 +172,7 @@ func calcChecksum(buf []byte) byte {
 			tmp2 -= 0xFF
 		}
 
-		checksum = byte(tmp2)
+		checksum = byte(tmp2 & 0xFF)
 	}
 
 	return checksum

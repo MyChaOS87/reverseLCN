@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-//nolint:deadcode,unused
+//nolint:unused
 func renderData(data map[string]*message) [][]string {
 	dataSlice := make([]*message, 0, len(data))
 

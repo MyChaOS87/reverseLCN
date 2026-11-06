@@ -4,7 +4,7 @@ This application is built to reverse-engineer the LCN serial protocol and thus m
 
 The LCN-PKU has an USB port which indeed is a serial port adapter to the LCN-bus. It can read and write data from/to the bus. The protocol is proprietary.
 
-`lcn2mgtt` bridges the LCN bus via USB to a MQTT broker, and publishes all bus messages to a topic. It also can read packets to be published from another topic and publish those to the LCN bus, which enables full smart home connectivity.
+`lcn2mqtt` bridges the LCN bus via USB to a MQTT broker, and publishes all bus messages to a topic. It also can read packets to be published from another topic and publish those to the LCN bus, which enables full smart home connectivity.
 
 # The LCN package format
 
@@ -35,3 +35,16 @@ This is highly experimental. I test this with my own LCN bus system, but cannot 
 
 # License 
 GPLv3
+
+---
+
+## Documentation & Development
+
+For deeper technical documentation, architecture blueprints, coding standards, and developer workflows, refer to:
+
+- [Agent Guide (`AGENTS.md`)](file:///home/kasch/projects/go/reverseLCN/AGENTS.md): Project overview, linear-main workflow, sandbox execution matrix, and hazards.
+- [Ubiquitous Language & Domain Glossary (`CONTEXT.md`)](file:///home/kasch/projects/go/reverseLCN/CONTEXT.md): LCN-PKU hardware, 6/8/12/20-byte packet anatomy, rotated checksum, and domain models.
+- [System Architecture (`docs/ARCHITECTURE.md`)](file:///home/kasch/projects/go/reverseLCN/docs/ARCHITECTURE.md): Dual-binary architecture, package DAG, sequence diagrams, and sliding-window chunker state machine.
+- [Coding Conventions (`docs/CONVENTIONS.md`)](file:///home/kasch/projects/go/reverseLCN/docs/CONVENTIONS.md): Go 1.27 idioms, binary bitwise masks, sentinel errors, and functional options.
+- [Testing Standards (`docs/TESTING.md`)](file:///home/kasch/projects/go/reverseLCN/docs/TESTING.md): Output-oriented tabular tests, 3-tier testing model, and tracked backlog items.
+- [Developer Toolchain (`docs/TOOLCHAIN.md`)](file:///home/kasch/projects/go/reverseLCN/docs/TOOLCHAIN.md): Makefile targets, isolated tool modules, vulnerability scanning, and licensing.

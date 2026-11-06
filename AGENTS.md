@@ -1,96 +1,68 @@
 # reverseLCN Agent Guide
 
-This document describes reverseLCN-specific conventions and tooling.
+`reverseLCN` is a specialized, lightweight Go utility suite that bridges and decodes proprietary Local Control Network (LCN) home automation bus traffic over USB serial interfaces (LCN-PKU) and exposes it to MQTT networks.
+
+The repository provides two core CLI binaries:
+- [`cmd/lcn2mqtt`](file:///home/kasch/projects/go/reverseLCN/cmd/lcn2mqtt/lcn2mqtt.go): A bidirectional USB serial <-> MQTT bridge that deserializes bus packets into JSON topics and transmits outbound MQTT commands onto the physical LCN bus.
+- [`cmd/lcnMonitor`](file:///home/kasch/projects/go/reverseLCN/cmd/lcnMonitor/lcnMonitor.go): A dedicated traffic monitoring subscriber that ingests bus telemetry from MQTT and prints human-readable interpretations of relay states, status queries, and device commands.
 
 ---
 
-## Project Overview
+## Engineering Principles
 
-`reverseLCN` is a utility application that acts as a bridge between the serial LCN-PKU bus interface and an MQTT broker.
-
----
-
-## Common Patterns
-
-```bash
-make all          # Full CI pipeline (tidy → build → lint → test)
-make test         # Run all tests
-make lint         # Run golangci-lint via isolated tool modfile
-make tidy         # go mod tidy
-make github-actions-test # Run GitHub Actions locally using act
-make tools-update # Update tool dependencies
-make tools-tidy   # Tidy tool modules
-make upgrade-direct-dependencies # Upgrade direct dependencies
-```
-
-**Tool Isolation & Version Pinning**: Tools live in `tools/<tool>/go.mod`, invoked as:
-```bash
-go tool -modfile=tools/golangci-lint/go.mod golangci-lint run ./...
-```
-
-To prevent `go mod tidy` from stripping tool dependencies (or relegating them entirely to `// indirect`), each tool module contains a `dummy.go` file with a blank import of the tool's main package:
-```go
-package <tool>
-import _ "<tool-package-path>"
-```
-This ensures the tool is tracked as a direct dependency in `go.mod`, pinning its exact version.
-
-
-**CI Gates**: `tidy` must produce no changes (enforced via `git diff --exit-code`).
-
-**Commit Format**:
-```
-feat[(<topic>)]: <description>
-chore[(<topic>)]: <description>
-bugfix[(<topic>)]: <description>
-```
-- Active present tense, one heading only
-- Use `*` for bullet points
-- Escape backticks in shell
+- **Pre-v1 Engineering Integrity**: `reverseLCN` is currently pre-v1 software. Never introduce backwards-compatibility shims, deprecated legacy wrappers, or speculative abstraction layers. Refactor callers in-place and remove superseded code cleanly.
+- **80/20 Simplicity & Protocol Focus**: Favor straightforward, idiomatic Go standard library code over heavy external frameworks. Keep package APIs lean, deterministic, and tailored directly to physical bus constraints (fixed frame lengths, bitwise math, serial buffer boundaries).
+- **Strict Boundary Decoupling**: Generic packages under [`pkg/`](file:///home/kasch/projects/go/reverseLCN/pkg) must remain completely independent of application concerns. They must never depend on [`cmd/`](file:///home/kasch/projects/go/reverseLCN/cmd), [`config/`](file:///home/kasch/projects/go/reverseLCN/config), or [`internal/`](file:///home/kasch/projects/go/reverseLCN/internal) (enforced by `depguard`).
 
 ---
 
-## Architecture & Layout
+## Knowledgebase Routing Table
 
-| Component | Directory | Description |
-|-----------|-----------|-------------|
-| **CLI binaries** | `cmd/` | Contains `lcn2mqtt` (main bridge) and `lcnMonitor` (monitoring subscriber) |
-| **MQTT Client** | `pkg/broker/mqtt` | MQTT broker client interface (Paho MQTT) |
-| **Serial Bus** | `pkg/serial` | Serial port reader/writer loop |
-| **LCN Protocol** | `internal/serial/chunker/lcn` | Packet deserializer, checksum calculation, and layout mapping |
-| **Collector Chunker** | `pkg/serial/chunker` | Buffer chunking logic separating byte streams into discrete packets |
+Consult these dedicated documents for detailed technical specifications and patterns:
 
----
-
-## Git Workflow
-
-**Branching**: Prefer feature branches for any non-trivial work:
-```bash
-git checkout -b feature/description
-git checkout -b bugfix/description
-```
-
-**Testing Changes**: Always verify changes using the project's make targets before committing:
-```bash
-make all          # Run full CI pipeline locally
-# Or at minimum:
-make test && make lint
-```
-
-**CRITICAL**: Never push to remote without explicit command. Always verify via `git diff` before pushing.
+| Document | Scope & When to Read |
+|---|---|
+| [`CONTEXT.md`](file:///home/kasch/projects/go/reverseLCN/CONTEXT.md) | **Domain Glossary & Ubiquitous Language**: Definitions of `LCN-PKU`, physical packet frames (6/8/12/20 bytes), bit-mirrored [`Src`](file:///home/kasch/projects/go/reverseLCN/internal/serial/chunker/lcn/lcn.go#L35), `Info` length mask (`0x0C`), rotated-sum [`Checksum`](file:///home/kasch/projects/go/reverseLCN/internal/serial/chunker/lcn/lcn.go#L160), [`packet.Packet`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/packet/packet.go#L10), [`chunker.Chunker`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/chunker.go#L19), [`serial.Port`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/port.go#L18), [`broker.Broker`](file:///home/kasch/projects/go/reverseLCN/pkg/broker/broker.go#L5), and [`monitor.DataStore`](file:///home/kasch/projects/go/reverseLCN/internal/monitor/datastore.go#L14). |
+| [`docs/ARCHITECTURE.md`](file:///home/kasch/projects/go/reverseLCN/docs/ARCHITECTURE.md) | **System Architecture**: Dual-binary architecture, package DAG (`pkg/` vs `internal/` boundary), bidirectional bridge sequence diagram, sliding-window chunker resynchronization state machine, and multi-stage `FROM scratch` container builds. |
+| [`docs/CONVENTIONS.md`](file:///home/kasch/projects/go/reverseLCN/docs/CONVENTIONS.md) | **Coding Idioms & Standards**: Go 1.27 conventions, bitwise mask constants, sentinel error wrapping (`%w`), functional options for serial and MQTT brokers, Viper environment mapping (`LCN_*`), and commit conventions. |
+| [`docs/TESTING.md`](file:///home/kasch/projects/go/reverseLCN/docs/TESTING.md) | **Test Philosophy & Compliance**: Output-oriented tabular testing for binary protocols, 3-tier testing model, `t.Parallel()` and `t.Context()` compliance, test assertion ordering, and the 4 tracked backlog items (#13-#16). |
+| [`docs/TOOLCHAIN.md`](file:///home/kasch/projects/go/reverseLCN/docs/TOOLCHAIN.md) | **Developer Toolchain**: Complete [`Makefile`](file:///home/kasch/projects/go/reverseLCN/Makefile) target reference, `export GOWORK=off`, isolated tool modules with `dummy.go`, `go fix`, vulnerability scanning (`syft`, `grype`, `govulncheck`), and GPL-3.0 / EPL-2.0 licensing policies. |
 
 ---
 
-## Troubleshooting
+## Git & Solo Linear-`main` Workflow
 
-**Run single test**:
-```bash
-go test -v -run TestName ./package/...
-```
+- **Repository Boundary**: Always run git commands targeted strictly to this project directory:
+  ```bash
+  git -C /home/kasch/projects/go/reverseLCN <command>
+  ```
+- **Linear-`main` Development**: Solo maintainer mode is active. Work directly on `main` for cohesive changes, or create an isolated worktree under `/home/kasch/projects/worktree/go/reverseLCN/<branch>`. Merge branches back to `main` using fast-forward only (`git merge --ff-only`).
+- **Remote Mutation Safeguard**: Never run `git push`, `git push --force`, or any command that mutates git remotes without explicit, affirmative user confirmation.
 
-**Tool not found?**:
-```bash
-ls tools/<tool>/          # Check tool exists
-make tools-update         # Update dependencies
-make tools-tidy && make tidy   # Clean up modules
-```
+---
+
+## Sandbox Execution Matrix (`BypassSandbox`)
+
+Prefer running commands in the default sandboxed environment (`BypassSandbox: false`). Escalate to `BypassSandbox: true` only when encountering genuine environment boundaries:
+
+| Operation | `BypassSandbox` | Reason |
+|---|---|---|
+| `make test`, `make coverage`, `go test ./...` | `false` | Runs entirely in-memory using local workspace mounts and stdlib tests. |
+| `make lint`, `make build`, `make tidy`, `make sbom`, `make notice` | `false` | Offline static analysis, AST verification, and local file generation using pre-installed toolchains. |
+| `make audit-image`, `make docker-build` | `true` | Requires Podman or Docker container engine socket access (`/run/user/...` or `/var/run/docker.sock`). |
+| `make audit-repo`, `make vulncheck`, `make audit` | `true` | Requires outbound network access to fetch remote vulnerability databases (Grype DB and Go vulnerability database). |
+| `make upgrade-direct-dependencies`, `make tools-update`, `git fetch/pull/push` | `true` | Requires outbound network access to Go module proxies and remote git repositories. |
+
+---
+
+## Agent Hazards (Do Not Do)
+
+1. **Never allow `pkg/` to import `cmd/`, `config/`, or `internal/`**: The `pkg/` tree provides reusable, generic primitives (serial I/O, MQTT abstraction, chunking). Enforced strictly by `.golangci.yml` `depguard` rules.
+2. **Never alter `mirrorSrc` or `calcChecksum` without verified bus vectors**: LCN hardware bit-reversal and rotated-sum checksums are reverse-engineered algorithms matching physical Issendorff hardware. Changing them without captured real-bus test vectors breaks communication.
+3. **Never block the MQTT callback goroutine**: The Paho MQTT callback dispatches inbound messages. Long-running or blocking work (such as sending to serial) must be dispatched asynchronously (e.g., `go port.Send(buf)`) to prevent stalling the MQTT message loop.
+4. **Never hand-edit generated license or SBOM assets**: Do not manually edit [`NOTICE.txt`](file:///home/kasch/projects/go/reverseLCN/NOTICE.txt), `dependencies.asciidoc`, or `reverseLCN.sbom.cdx.json`. Re-generate them via `make notice` and `make sbom`.
+5. **Never delete or strip `tools/<tool>/dummy.go` files**: Each isolated tool module requires a `dummy.go` file with a blank import `import _ "<pkg>"` to pin direct tool versions and prevent `go mod tidy` from stripping tool dependencies.
+6. **Never remediate transitive CVEs by promoting indirect dependencies**: Do not convert an `// indirect` dependency into a direct dependency in [`go.mod`](file:///home/kasch/projects/go/reverseLCN/go.mod). Use a version-pinned `replace` directive instead:
+   ```
+   replace <module> <vulnerable-version> => <module> <fixed-version> // fix <CVE-ID>
+   ```

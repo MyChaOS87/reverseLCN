@@ -18,6 +18,7 @@ type DataStore struct {
 
 type message struct {
 	lcn.Packet
+
 	lastSeen time.Time
 	times    int
 }

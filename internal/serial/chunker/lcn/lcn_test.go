@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/MyChaOS87/reverseLCN/internal/serial/chunker/lcn"
 	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/packet"
@@ -13,9 +14,9 @@ import (
 func TestErrors(t *testing.T) {
 	t.Parallel()
 
-	assert.ErrorIs(t, lcn.ErrLcnPacketIncomplete, packet.ErrPacketIncomplete)
-	assert.ErrorIs(t, lcn.ErrLcnPacketInvalid, packet.ErrPacketInvalid)
-	assert.ErrorIs(t, lcn.ErrLcnPacketInvalidChecksum, packet.ErrPacketInvalid)
+	require.ErrorIs(t, lcn.ErrLcnPacketIncomplete, packet.ErrPacketIncomplete)
+	require.ErrorIs(t, lcn.ErrLcnPacketInvalid, packet.ErrPacketInvalid)
+	require.ErrorIs(t, lcn.ErrLcnPacketInvalidChecksum, packet.ErrPacketInvalid)
 }
 
 func TestDeserialize(t *testing.T) {
@@ -103,10 +104,10 @@ func TestDeserialize(t *testing.T) {
 
 			pkt, err := lcn.Deserialize(tt.input)
 			if tt.error == nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tt.packet, pkt)
 			} else {
-				assert.ErrorIs(t, tt.error, err)
+				require.ErrorIs(t, err, tt.error)
 				assert.Nil(t, pkt)
 			}
 		})
@@ -178,10 +179,10 @@ func TestSerialize(t *testing.T) {
 
 			output, err := tt.packet.Serialize()
 			if tt.error == nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tt.output, output)
 			} else {
-				assert.ErrorIs(t, tt.error, err)
+				require.ErrorIs(t, err, tt.error)
 				assert.Nil(t, output)
 			}
 		})
