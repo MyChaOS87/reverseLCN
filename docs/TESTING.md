@@ -1,6 +1,6 @@
 # reverseLCN Test Philosophy & Compliance
 
-This document describes the testing standards, test architecture tiers, test mechanics, and tracked backlog items for `reverseLCN`.
+This document describes the testing standards, test architecture tiers, and mandatory test mechanics for `reverseLCN`.
 
 ---
 
@@ -77,14 +77,3 @@ Protocol bridges and binary serial chunkers must be tested through **output-orie
    - Use `github.com/stretchr/testify/require` for fatal preconditions (e.g., verifying `require.NoError(t, err)` or `require.NotNil(t, pkt)` before inspecting fields).
    - Use `github.com/stretchr/testify/assert` for non-fatal value assertions.
    - Respect parameter order: `assert.Equal(t, expected, actual)`.
-
----
-
-## Tracked Backlog Items
-
-The following testing and architectural backlog items are tracked for `reverseLCN`:
-
-### Item #16: `Plain.Serialize` Symmetry & Core Package Coverage
-- **Location**: [`pkg/serial/chunker/plain/plain.go`](../pkg/serial/chunker/plain/plain.go#L18)
-- **Problem**: [`Plain.Serialize()`](../pkg/serial/chunker/plain/plain.go#L18) returns `[]byte(p.ToString())` (the ASCII hex characters) instead of the underlying raw bytes `[]byte(*p)`. This breaks round-trip symmetry (`Deserialize` -> `Serialize`).
-- **Resolution**: Fix `Plain.Serialize()` to return `*p` or a copy thereof, and add unit tests for `pkg/serial/chunker/plain`, `config`, `pkg/serial`, and `pkg/broker/mqtt`.
