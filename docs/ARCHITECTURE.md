@@ -6,11 +6,11 @@ This document describes the architectural layout, package dependency graph, bidi
 
 ## Dual-Binary Package DAG
 
-The repository compiles two independent CLI binaries from [`cmd/`](file:///home/kasch/projects/go/reverseLCN/cmd):
+The repository compiles two independent CLI binaries from [`cmd/`](../cmd):
 1. `lcn2mqtt`: Production USB serial <-> MQTT gateway bridge.
 2. `lcnMonitor`: Diagnostic bus observer and packet decoding subscriber.
 
-The architecture strictly enforces package boundaries: generic utility packages located under [`pkg/`](file:///home/kasch/projects/go/reverseLCN/pkg) never import application packages under [`cmd/`](file:///home/kasch/projects/go/reverseLCN/cmd), [`config/`](file:///home/kasch/projects/go/reverseLCN/config), or [`internal/`](file:///home/kasch/projects/go/reverseLCN/internal).
+The architecture strictly enforces package boundaries: generic utility packages located under [`pkg/`](../pkg) never import application packages under [`cmd/`](../cmd), [`config/`](../config), or [`internal/`](../internal).
 
 ```mermaid
 flowchart TD
@@ -89,10 +89,10 @@ flowchart TD
 
 ## Bidirectional Bridge Sequence
 
-[`cmd/lcn2mqtt`](file:///home/kasch/projects/go/reverseLCN/cmd/lcn2mqtt/lcn2mqtt.go) mediates between the physical serial connection (`LCN-PKU`) and an MQTT broker. Communication is fully bidirectional:
+[`cmd/lcn2mqtt`](../cmd/lcn2mqtt/lcn2mqtt.go) mediates between the physical serial connection (`LCN-PKU`) and an MQTT broker. Communication is fully bidirectional:
 
 ### 1. Bus -> MQTT (Inbound Telemetry)
-The physical bus transmits electrical pulses read by the PKU USB adapter. Incoming bytes are chunked, validated, deserialized into an [`lcn.Packet`](file:///home/kasch/projects/go/reverseLCN/internal/serial/chunker/lcn/lcn.go#L34), and published as JSON to `lcn/segment/<seg>/target/<dst>/`.
+The physical bus transmits electrical pulses read by the PKU USB adapter. Incoming bytes are chunked, validated, deserialized into an [`lcn.Packet`](../internal/serial/chunker/lcn/lcn.go#L34), and published as JSON to `lcn/segment/<seg>/target/<dst>/`.
 
 ### 2. MQTT -> Bus (Outbound Commands)
 An external client or smart-home controller publishes an LCN packet JSON payload to `lcn/in`. The bridge receives the message, unmarshals the JSON into an `lcn.Packet`, computes the rotated-sum checksum and mirrored source byte, and queues the binary buffer to the serial writer.
@@ -129,17 +129,17 @@ sequenceDiagram
 
 ## Sliding-Window Chunker Resynchronization
 
-Because serial connections over USB can experience noise, frame fragmentation, or byte loss across OS `read()` boundaries, [`pkg/serial/chunker/chunker.go`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/chunker.go) implements a sliding-window resynchronization state machine.
+Because serial connections over USB can experience noise, frame fragmentation, or byte loss across OS `read()` boundaries, [`pkg/serial/chunker/chunker.go`](../pkg/serial/chunker/chunker.go) implements a sliding-window resynchronization state machine.
 
 ### State Transitions
 
 1. **Ingest**: Raw bytes read from the serial port are appended directly to the internal `bytes.Buffer`.
 2. **Length Guard**: If `buffer.Len() < minLength` (where `minLength = 6` for LCN), the chunker yields back to the serial reader to await more data.
-3. **Speculative Deserialization**: The chunker presents current buffer bytes to the registered [`packet.Deserializer`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/packet/packet.go#L16).
+3. **Speculative Deserialization**: The chunker presents current buffer bytes to the registered [`packet.Deserializer`](../pkg/serial/chunker/packet/packet.go#L16).
 4. **Resolution**:
    - **`ErrPacketIncomplete`**: The packet header specifies a larger length than currently buffered (e.g. `Info` specifies length 12 or 20, but only 8 bytes have arrived). The loop breaks without consuming bytes and waits for the next OS read (`continue read_loop`).
    - **`ErrPacketInvalid` or Checksum Error**: The buffer contains corrupt framing, an illegal length code, or an invalid checksum. The chunker executes `search()` (`buffer.Next(1)`), which **discards exactly 1 byte** from the head of the buffer, shifting the window forward to re-test the subsequent byte as a potential frame start.
-   - **Success**: A clean, checksum-verified packet is assembled. The chunker invokes [`eject(pkt)`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/chunker.go#L57) and calls `reset()` (`buffer.Reset()`), clearing the consumed frame and preparing for the next sequence.
+   - **Success**: A clean, checksum-verified packet is assembled. The chunker invokes [`eject(pkt)`](../pkg/serial/chunker/chunker.go#L57) and calls `reset()` (`buffer.Reset()`), clearing the consumed frame and preparing for the next sequence.
 
 ```mermaid
 flowchart TD
@@ -165,7 +165,7 @@ flowchart TD
 
 ## Container Build Architecture (`FROM scratch`)
 
-The container images for `lcn2mqtt` are defined in [`Dockerfile`](file:///home/kasch/projects/go/reverseLCN/Dockerfile) and [`build/lcn2mqtt/Dockerfile`](file:///home/kasch/projects/go/reverseLCN/build/lcn2mqtt/Dockerfile). The build uses a strict multi-stage workflow:
+The container images for `lcn2mqtt` are defined in [`Dockerfile`](../Dockerfile) and [`build/lcn2mqtt/Dockerfile`](../build/lcn2mqtt/Dockerfile). The build uses a strict multi-stage workflow:
 
 ### Stage 1: Static Builder (`golang:1.27-alpine`)
 - Installs minimal toolchain requirements (`ca-certificates`, `tzdata`, `musl-utils`).

@@ -40,11 +40,11 @@ Protocol bridges and binary serial chunkers must be tested through **output-orie
 ### Tier 1: Pure Protocol & Chunker Tabular Tests
 - **Scope**: Packet deserialization, serialization, checksum computation, bitwise mirroring, sliding-window chunking, and monitor payload decoding.
 - **Characteristics**: 100% in-memory, deterministic, zero network or filesystem I/O, runs in sub-seconds.
-- **Target packages**: [`internal/serial/chunker/lcn`](file:///home/kasch/projects/go/reverseLCN/internal/serial/chunker/lcn/lcn_test.go), [`pkg/serial/chunker`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/chunker_test.go), [`internal/monitor`](file:///home/kasch/projects/go/reverseLCN/internal/monitor).
+- **Target packages**: [`internal/serial/chunker/lcn`](../internal/serial/chunker/lcn/lcn_test.go), [`pkg/serial/chunker`](../pkg/serial/chunker/chunker_test.go), [`internal/monitor`](../internal/monitor).
 
 ### Tier 2: In-Memory Component Fakes
-- **Scope**: Testing [`serial.Port`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/port.go#L18) and [`broker.Broker`](file:///home/kasch/projects/go/reverseLCN/pkg/broker/broker.go#L5) coordination without real USB hardware or external brokers.
-- **Fixtures**: Use `net.Pipe()` or in-memory channel-based serial mocks, and [`null.NewBroker()`](file:///home/kasch/projects/go/reverseLCN/pkg/broker/null/nullBroker.go#L34) to verify context cancellation and queue flushing.
+- **Scope**: Testing [`serial.Port`](../pkg/serial/port.go#L18) and [`broker.Broker`](../pkg/broker/broker.go#L5) coordination without real USB hardware or external brokers.
+- **Fixtures**: Use `net.Pipe()` or in-memory channel-based serial mocks, and [`null.NewBroker()`](../pkg/broker/null/nullBroker.go#L34) to verify context cancellation and queue flushing.
 
 ### Tier 3: Container Integration Tests
 - **Scope**: Live end-to-end MQTT connectivity using an external Mosquitto broker.
@@ -85,6 +85,6 @@ Protocol bridges and binary serial chunkers must be tested through **output-orie
 The following testing and architectural backlog items are tracked for `reverseLCN`:
 
 ### Item #16: `Plain.Serialize` Symmetry & Core Package Coverage
-- **Location**: [`pkg/serial/chunker/plain/plain.go`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/plain/plain.go#L18)
-- **Problem**: [`Plain.Serialize()`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/plain/plain.go#L18) returns `[]byte(p.ToString())` (the ASCII hex characters) instead of the underlying raw bytes `[]byte(*p)`. This breaks round-trip symmetry (`Deserialize` -> `Serialize`).
+- **Location**: [`pkg/serial/chunker/plain/plain.go`](../pkg/serial/chunker/plain/plain.go#L18)
+- **Problem**: [`Plain.Serialize()`](../pkg/serial/chunker/plain/plain.go#L18) returns `[]byte(p.ToString())` (the ASCII hex characters) instead of the underlying raw bytes `[]byte(*p)`. This breaks round-trip symmetry (`Deserialize` -> `Serialize`).
 - **Resolution**: Fix `Plain.Serialize()` to return `*p` or a copy thereof, and add unit tests for `pkg/serial/chunker/plain`, `config`, `pkg/serial`, and `pkg/broker/mqtt`.

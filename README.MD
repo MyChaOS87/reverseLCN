@@ -42,9 +42,9 @@ GPLv3
 
 For deeper technical documentation, architecture blueprints, coding standards, and developer workflows, refer to:
 
-- [Agent Guide (`AGENTS.md`)](file:///home/kasch/projects/go/reverseLCN/AGENTS.md): Project overview, linear-main workflow, sandbox execution matrix, and hazards.
-- [Ubiquitous Language & Domain Glossary (`CONTEXT.md`)](file:///home/kasch/projects/go/reverseLCN/CONTEXT.md): LCN-PKU hardware, 6/8/12/20-byte packet anatomy, rotated checksum, and domain models.
-- [System Architecture (`docs/ARCHITECTURE.md`)](file:///home/kasch/projects/go/reverseLCN/docs/ARCHITECTURE.md): Dual-binary architecture, package DAG, sequence diagrams, and sliding-window chunker state machine.
-- [Coding Conventions (`docs/CONVENTIONS.md`)](file:///home/kasch/projects/go/reverseLCN/docs/CONVENTIONS.md): Go 1.27 idioms, binary bitwise masks, sentinel errors, and functional options.
-- [Testing Standards (`docs/TESTING.md`)](file:///home/kasch/projects/go/reverseLCN/docs/TESTING.md): Output-oriented tabular tests, 3-tier testing model, and tracked backlog items.
-- [Developer Toolchain (`docs/TOOLCHAIN.md`)](file:///home/kasch/projects/go/reverseLCN/docs/TOOLCHAIN.md): Makefile targets, isolated tool modules, vulnerability scanning, and licensing.
+- [Agent Guide (`AGENTS.md`)](./AGENTS.md): Project overview, linear-main workflow, sandbox execution matrix, and hazards.
+- [Ubiquitous Language & Domain Glossary (`CONTEXT.md`)](./CONTEXT.md): LCN-PKU hardware, 6/8/12/20-byte packet anatomy, rotated checksum, and domain models.
+- [System Architecture (`docs/ARCHITECTURE.md`)](./docs/ARCHITECTURE.md): Dual-binary architecture, package DAG, sequence diagrams, and sliding-window chunker state machine.
+- [Coding Conventions (`docs/CONVENTIONS.md`)](./docs/CONVENTIONS.md): Go 1.27 idioms, binary bitwise masks, sentinel errors, and functional options.
+- [Testing Standards (`docs/TESTING.md`)](./docs/TESTING.md): Output-oriented tabular tests, 3-tier testing model, and tracked backlog items.
+- [Developer Toolchain (`docs/TOOLCHAIN.md`)](./docs/TOOLCHAIN.md): Makefile targets, isolated tool modules, vulnerability scanning, and licensing.

@@ -11,7 +11,7 @@ This document records the coding style, Go language standards, protocol bitwise 
 - **AST Modernization via `go fix`**: Run `go fix ./...` to adopt standard library improvements and AST migrations. `make lint` enforces `go fix -diff ./...`.
 - **Standard Library Primitives**: Use standard library primitives over external packages:
   - Use stdlib `errors` (`errors.Is`, `errors.As`, `fmt.Errorf`) instead of `github.com/pkg/errors` (blocked by `gomodguard_v2`).
-  - Use stdlib `slices` (e.g., [`slices.SortFunc`](file:///home/kasch/projects/go/reverseLCN/internal/monitor/datastore.go#L58)) and built-in `min`/`max` functions instead of custom loops.
+  - Use stdlib `slices` (e.g., [`slices.SortFunc`](../internal/monitor/datastore.go#L58)) and built-in `min`/`max` functions instead of custom loops.
   - Test context creation must use `t.Context()` instead of `context.Background()` or `context.TODO()` in tests (enforced by `usetesting`).
 - **Loop Variable Scoping**: Go 1.22+ per-iteration variable scoping is active. Do not add redundant `tt := tt` redeclarations in new subtests.
 
@@ -70,7 +70,7 @@ func testDigit(b byte, out int) bool {
 
 To allow the chunker and protocol layers to reliably inspect errors with `errors.Is`, domain errors must wrap base sentinel errors using `%w`:
 
-### Base Sentinels ([`pkg/serial/chunker/packet`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/chunker/packet/packet.go#L5))
+### Base Sentinels ([`pkg/serial/chunker/packet`](../pkg/serial/chunker/packet/packet.go#L5))
 ```go
 var (
     ErrPacketIncomplete = errors.New("Packet Incomplete")
@@ -78,7 +78,7 @@ var (
 )
 ```
 
-### Protocol-Specific Wrapped Errors ([`internal/serial/chunker/lcn`](file:///home/kasch/projects/go/reverseLCN/internal/serial/chunker/lcn/lcn.go#L26))
+### Protocol-Specific Wrapped Errors ([`internal/serial/chunker/lcn`](../internal/serial/chunker/lcn/lcn.go#L26))
 ```go
 var (
     ErrLcnPacketIncomplete      = fmt.Errorf("%w: LCN Packet to short", packet.ErrPacketIncomplete)
@@ -103,7 +103,7 @@ Never compare errors via direct string comparison or direct equality (`err == ..
 
 Packages configuring I/O devices or network clients must use functional options:
 
-### Serial Port Configuration ([`pkg/serial`](file:///home/kasch/projects/go/reverseLCN/pkg/serial/options.go#L10))
+### Serial Port Configuration ([`pkg/serial`](../pkg/serial/options.go#L10))
 ```go
 type Option func(*Config)
 
@@ -120,7 +120,7 @@ func Deserializer(deserializer packet.Deserializer) Option {
 }
 ```
 
-Usage in [`cmd/lcn2mqtt`](file:///home/kasch/projects/go/reverseLCN/cmd/lcn2mqtt/lcn2mqtt.go#L30):
+Usage in [`cmd/lcn2mqtt`](../cmd/lcn2mqtt/lcn2mqtt.go#L30):
 ```go
 port := serial.NewPort(
     serial.BaudRate(cfg.Serial.BaudRate),
@@ -129,7 +129,7 @@ port := serial.NewPort(
 )
 ```
 
-### MQTT Broker Configuration ([`pkg/broker/mqtt`](file:///home/kasch/projects/go/reverseLCN/pkg/broker/mqtt/options.go#L9))
+### MQTT Broker Configuration ([`pkg/broker/mqtt`](../pkg/broker/mqtt/options.go#L9))
 ```go
 func Broker(broker string) Option {
     return func(c *Config) {
@@ -150,7 +150,7 @@ Constructors must instantiate sensible defaults before applying variadic options
 
 ## Configuration via Viper (`LCN_*`)
 
-Configuration management in [`config/config.go`](file:///home/kasch/projects/go/reverseLCN/config/config.go#L38) uses Viper with explicit hierarchical mapping:
+Configuration management in [`config/config.go`](../config/config.go#L38) uses Viper with explicit hierarchical mapping:
 
 ```go
 const envPrefix = "LCN"
