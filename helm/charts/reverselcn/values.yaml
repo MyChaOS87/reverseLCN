@@ -2,10 +2,11 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
-
-strategy:
-  type: Recreate
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 0
+    maxUnavailable: 1
 
 image:
   repository: ghcr.io/mychaos87/reverselcn
@@ -56,12 +57,6 @@ resources:
     memory: 32Mi
 
 env: []
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 1
-  targetCPUUtilizationPercentage: 80
 
 nodeSelector: {}
 

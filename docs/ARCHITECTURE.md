@@ -188,5 +188,5 @@ The container images for `lcn2mqtt` are defined in [`Dockerfile`](../Dockerfile)
 This produces a zero-footprint, hardened image containing no shell, package manager, or unnecessary OS binaries, minimizing attack surface and eliminating container base-image CVEs.
 
 ### Helm Chart Packaging (`helm/charts/reverselcn`)
-- [`helm/charts/reverselcn/`](../helm/charts/reverselcn/) packages `lcn2mqtt` as a non-root, privilege-dropped Kubernetes `Deployment` (`runAsNonRoot: true`, `runAsUser: 10001`, `supplementalGroups: [20]` for `dialout`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`) using `strategy.type: Recreate` and mounting only the serial character device (`type: CharDevice`).
+- [`helm/charts/reverselcn/`](../helm/charts/reverselcn/) packages `lcn2mqtt` as a non-root, privilege-dropped Kubernetes `DaemonSet` (`runAsNonRoot: true`, `runAsUser: 10001`, `supplementalGroups: [20]` for `dialout`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`) using `updateStrategy.rollingUpdate` (`maxSurge: 0, maxUnavailable: 1`) and mounting only the serial character device (`type: CharDevice`).
 - Published automatically to GitHub Pages via [`.github/workflows/release-chart.yml`](../.github/workflows/release-chart.yml).
