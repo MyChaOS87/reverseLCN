@@ -168,18 +168,25 @@ flowchart TD
 The container images for `lcn2mqtt` are defined in [`Dockerfile`](../Dockerfile) and [`build/lcn2mqtt/Dockerfile`](../build/lcn2mqtt/Dockerfile). The build uses a strict multi-stage workflow:
 
 ### Stage 1: Static Builder (`golang:1.27-alpine`)
-- Installs minimal toolchain requirements (`ca-certificates`, `tzdata`, `musl-utils`).
+- Runs natively on `$BUILDPLATFORM` (`FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder`) and cross-compiles for `$TARGETOS`/`$TARGETARCH`/`$TARGETVARIANT` (`linux/amd64`, `linux/arm64`, `linux/arm/v7`, `linux/arm/v6`).
+- Installs minimal toolchain requirements (`ca-certificates`, `tzdata`, `musl-utils`) and creates an unprivileged user (`appuser`, `UID=10001`).
 - Compiles a fully static binary with Go build cache mounting:
   ```bash
-  go build -v -ldflags "-X main.Version=$APP_VERSION -extldflags '-static'" -o /dist/lcn2mqtt ./cmd/lcn2mqtt
+  CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
+  go build -v -ldflags "-w -s -X main.Version=$APP_VERSION -extldflags '-static'" -o /dist/lcn2mqtt ./cmd/lcn2mqtt
   ```
 - Uses `ldd` and `xargs` to verify and resolve any runtime shared library requirements into `/dist`.
 
 ### Stage 2: Runtime (`FROM scratch`)
 - Copies time zone data from `/usr/share/zoneinfo`.
 - Copies trusted SSL/TLS root certificates from `/etc/ssl/certs/ca-certificates.crt` (required for TLS MQTT broker connections).
+- Copies `/etc/passwd` and `/etc/group` from builder and switches to `USER appuser:appuser` (`10001:10001`).
 - Copies the static binary `/dist/lcn2mqtt` into root `/`.
 - Copies default configuration from `/build/config/config.yml` into `/config/`.
 - Configures `ENTRYPOINT ["/lcn2mqtt"]`.
 
 This produces a zero-footprint, hardened image containing no shell, package manager, or unnecessary OS binaries, minimizing attack surface and eliminating container base-image CVEs.
+
+### Helm Chart Packaging (`helm/charts/reverselcn`)
+- [`helm/charts/reverselcn/`](../helm/charts/reverselcn/) packages `lcn2mqtt` as a non-root, privilege-dropped Kubernetes `Deployment` (`runAsNonRoot: true`, `runAsUser: 10001`, `supplementalGroups: [20]` for `dialout`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`) using `strategy.type: Recreate` and mounting only the serial character device (`type: CharDevice`).
+- Published automatically to GitHub Pages via [`.github/workflows/release-chart.yml`](../.github/workflows/release-chart.yml).
