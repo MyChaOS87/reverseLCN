@@ -46,5 +46,5 @@ For deeper technical documentation, architecture blueprints, coding standards, a
 - [Ubiquitous Language & Domain Glossary (`CONTEXT.md`)](./CONTEXT.md): LCN-PKU hardware, 6/8/12/20-byte packet anatomy, rotated checksum, and domain models.
 - [System Architecture (`docs/ARCHITECTURE.md`)](./docs/ARCHITECTURE.md): Dual-binary architecture, package DAG, sequence diagrams, and sliding-window chunker state machine.
 - [Coding Conventions (`docs/CONVENTIONS.md`)](./docs/CONVENTIONS.md): Go 1.27 idioms, binary bitwise masks, sentinel errors, and functional options.
-- [Testing Standards (`docs/TESTING.md`)](./docs/TESTING.md): Output-oriented tabular tests, 3-tier testing model, and tracked backlog items.
+- [Testing Standards (`docs/TESTING.md`)](./docs/TESTING.md): Output-oriented tabular tests, 3-tier testing model, and mandatory test mechanics.
 - [Developer Toolchain (`docs/TOOLCHAIN.md`)](./docs/TOOLCHAIN.md): Makefile targets, isolated tool modules, vulnerability scanning, and licensing.

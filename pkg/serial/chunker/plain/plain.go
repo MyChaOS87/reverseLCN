@@ -16,7 +16,7 @@ func Deserialize(buf []byte) (packet.Packet, error) {
 }
 
 func (p *Plain) Serialize() ([]byte, error) {
-	return []byte(p.ToString()), nil
+	return []byte(*p), nil
 }
 
 func (p *Plain) ToString() string {
