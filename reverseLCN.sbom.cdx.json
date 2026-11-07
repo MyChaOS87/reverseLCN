@@ -48,6 +48,32 @@
       ]
     },
     {
+      "bom-ref": "pkg:github/actions/checkout@v3?package-id=fbdb9d8e4cd75865",
+      "type": "library",
+      "name": "actions/checkout",
+      "version": "v3",
+      "cpe": "cpe:2.3:a:actions\\/checkout:actions\\/checkout:v3:*:*:*:*:*:*:*",
+      "purl": "pkg:github/actions/checkout@v3",
+      "properties": [
+        {
+          "name": "syft:package:foundBy",
+          "value": "github-actions-usage-cataloger"
+        },
+        {
+          "name": "syft:package:type",
+          "value": "github-action"
+        },
+        {
+          "name": "syft:package:metadataType",
+          "value": "github-actions-use-statement"
+        },
+        {
+          "name": "syft:location:0:path",
+          "value": ".github/workflows/release-chart.yml"
+        }
+      ]
+    },
+    {
       "bom-ref": "pkg:github/actions/checkout@v6.0.2?package-id=7476427ccbad27f5",
       "type": "library",
       "name": "actions/checkout",
@@ -116,6 +142,52 @@
         {
           "name": "syft:location:0:path",
           "value": ".github/workflows/go.yml"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:github/azure/setup-helm@v3?package-id=57ba97d8c0026bcd",
+      "type": "library",
+      "name": "azure/setup-helm",
+      "version": "v3",
+      "cpe": "cpe:2.3:a:azure\\/setup-helm:azure\\/setup-helm:v3:*:*:*:*:*:*:*",
+      "purl": "pkg:github/azure/setup-helm@v3",
+      "properties": [
+        {
+          "name": "syft:package:foundBy",
+          "value": "github-actions-usage-cataloger"
+        },
+        {
+          "name": "syft:package:type",
+          "value": "github-action"
+        },
+        {
+          "name": "syft:package:metadataType",
+          "value": "github-actions-use-statement"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:azure\\/setup-helm:azure\\/setup_helm:v3:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:azure\\/setup_helm:azure\\/setup-helm:v3:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:azure\\/setup_helm:azure\\/setup_helm:v3:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:azure\\/setup:azure\\/setup-helm:v3:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:azure\\/setup:azure\\/setup_helm:v3:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:location:0:path",
+          "value": ".github/workflows/release-chart.yml"
         }
       ]
     },
@@ -1895,6 +1967,68 @@
       ]
     },
     {
+      "bom-ref": "pkg:github/helm/chart-releaser-action@v1.6.0?package-id=6fc4ad6b6ec97acc",
+      "type": "library",
+      "name": "helm/chart-releaser-action",
+      "version": "v1.6.0",
+      "cpe": "cpe:2.3:a:helm\\/chart-releaser-action:helm\\/chart-releaser-action:v1.6.0:*:*:*:*:*:*:*",
+      "purl": "pkg:github/helm/chart-releaser-action@v1.6.0",
+      "properties": [
+        {
+          "name": "syft:package:foundBy",
+          "value": "github-actions-usage-cataloger"
+        },
+        {
+          "name": "syft:package:type",
+          "value": "github-action"
+        },
+        {
+          "name": "syft:package:metadataType",
+          "value": "github-actions-use-statement"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:helm\\/chart-releaser-action:helm\\/chart_releaser_action:v1.6.0:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:helm\\/chart_releaser_action:helm\\/chart-releaser-action:v1.6.0:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:helm\\/chart_releaser_action:helm\\/chart_releaser_action:v1.6.0:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:helm\\/chart-releaser:helm\\/chart-releaser-action:v1.6.0:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:helm\\/chart-releaser:helm\\/chart_releaser_action:v1.6.0:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:helm\\/chart_releaser:helm\\/chart-releaser-action:v1.6.0:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:helm\\/chart_releaser:helm\\/chart_releaser_action:v1.6.0:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:helm\\/chart:helm\\/chart-releaser-action:v1.6.0:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:cpe23",
+          "value": "cpe:2.3:a:helm\\/chart:helm\\/chart_releaser_action:v1.6.0:*:*:*:*:*:*:*"
+        },
+        {
+          "name": "syft:location:0:path",
+          "value": ".github/workflows/release-chart.yml"
+        }
+      ]
+    },
+    {
       "bom-ref": "pkg:github/sigstore/cosign-installer@v3.8.1?package-id=0e1b9a735c8bb188",
       "type": "library",
       "name": "sigstore/cosign-installer",
@@ -1947,11 +2081,11 @@
       "hashes": [
         {
           "alg": "SHA-1",
-          "content": "00b35d85d74a45afec42fa62b48f2fcf4b0d2f47"
+          "content": "08b2e541c0470eee63b6e040b13d1bccc5c80b39"
         },
         {
           "alg": "SHA-256",
-          "content": "afa2ded89463e95c6138a15c178e191a810d9a713d8ec0ca3fab14fb4f684a1e"
+          "content": "e061b902dff6fb884ba45205f58b3410bc3eeab74fc0a6fc59868b10b3d33426"
         }
       ]
     },
@@ -1967,6 +2101,21 @@
         {
           "alg": "SHA-256",
           "content": "e452c7070f9af706e09f12708cbf8afc50a134a50d922e9571f99ce55a1321db"
+        }
+      ]
+    },
+    {
+      "bom-ref": "b761e448dfecb2da",
+      "type": "file",
+      "name": "/.github/workflows/release-chart.yml",
+      "hashes": [
+        {
+          "alg": "SHA-1",
+          "content": "d11e879d81692ebb3783474e054f1e46825cead4"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "3646c9102c42788b3dab1887c93f9fadb07622083d323841a90747a751b791bf"
         }
       ]
     },
