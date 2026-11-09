@@ -28,9 +28,7 @@ flowchart TD
 
     subgraph Pkg["Reusable Platform Libraries (pkg/)"]
         logPkg["pkg/log (Zap SugaredLogger)"]
-        brokerPkg["pkg/broker (Broker & Topic interfaces)"]
         mqttPkg["pkg/broker/mqtt (Paho MQTT Client)"]
-        nullPkg["pkg/broker/null (No-op NullBroker)"]
         serialPkg["pkg/serial (Port, Options, Reader/Writer)"]
         chunkerPkg["pkg/serial/chunker (Chunker interface & sliding-buffer)"]
         packetPkg["pkg/serial/chunker/packet (Packet & Deserializer interfaces)"]
@@ -38,18 +36,14 @@ flowchart TD
     end
 
     lcn2mqtt --> cmdInit
-    lcn2mqtt --> brokerPkg
     lcn2mqtt --> mqttPkg
-    lcn2mqtt --> nullPkg
     lcn2mqtt --> serialPkg
     lcn2mqtt --> lcnProto
     lcn2mqtt --> packetPkg
     lcn2mqtt --> logPkg
 
     lcnMonitor --> cmdInit
-    lcnMonitor --> brokerPkg
     lcnMonitor --> mqttPkg
-    lcnMonitor --> nullPkg
     lcnMonitor --> monitor
     lcnMonitor --> lcnProto
     lcnMonitor --> logPkg
@@ -71,10 +65,7 @@ flowchart TD
 
     plainPkg --> packetPkg
 
-    mqttPkg --> brokerPkg
     mqttPkg --> logPkg
-
-    nullPkg --> brokerPkg
 
     classDef pkgClass fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
     classDef internalClass fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
@@ -82,7 +73,7 @@ flowchart TD
 
     class lcn2mqtt,lcnMonitor cliClass;
     class cfg,cmdInit,monitor,lcnProto internalClass;
-    class logPkg,brokerPkg,mqttPkg,nullPkg,serialPkg,chunkerPkg,packetPkg,plainPkg pkgClass;
+    class logPkg,mqttPkg,serialPkg,chunkerPkg,packetPkg,plainPkg pkgClass;
 ```
 
 ---
@@ -92,7 +83,7 @@ flowchart TD
 [`cmd/lcn2mqtt`](../cmd/lcn2mqtt/lcn2mqtt.go) mediates between the physical serial connection (`LCN-PKU`) and an MQTT broker. Communication is fully bidirectional:
 
 ### 1. Bus -> MQTT (Inbound Telemetry)
-The physical bus transmits electrical pulses read by the PKU USB adapter. Incoming bytes are chunked, validated, deserialized into an [`lcn.Packet`](../internal/serial/chunker/lcn/lcn.go#L34), and published as JSON to `lcn/segment/<seg>/target/<dst>/`.
+The physical bus transmits electrical pulses read by the PKU USB adapter. Incoming bytes are chunked, validated, deserialized into an [`lcn.Packet`](../internal/serial/chunker/lcn/lcn.go), and published as JSON to `lcn/segment/<seg>/target/<dst>/`.
 
 ### 2. MQTT -> Bus (Outbound Commands)
 An external client or smart-home controller publishes an LCN packet JSON payload to `lcn/in`. The bridge receives the message, unmarshals the JSON into an `lcn.Packet`, computes the rotated-sum checksum and mirrored source byte, and queues the binary buffer to the serial writer.
@@ -118,7 +109,7 @@ sequenceDiagram
 
     Note over Bus,Broker: Outbound Flow: MQTT -> Bus
     Client->>Broker: Publish to "lcn/in" (JSON packet)
-    Broker->>Bridge: MQTT message callback (*lcn.Packet)
+    Broker->>Bridge: MQTT message callback (lcn.Packet)
     Bridge->>Bridge: pkt.Serialize() (mirrorSrc + calcChecksum)
     Bridge->>Port: go port.Send(wireBytes) (sendQueue channel)
     Port->>PKU: port.Write(wireBytes)
@@ -135,11 +126,11 @@ Because serial connections over USB can experience noise, frame fragmentation, o
 
 1. **Ingest**: Raw bytes read from the serial port are appended directly to the internal `bytes.Buffer`.
 2. **Length Guard**: If `buffer.Len() < minLength` (where `minLength = 6` for LCN), the chunker yields back to the serial reader to await more data.
-3. **Speculative Deserialization**: The chunker presents current buffer bytes to the registered [`packet.Deserializer`](../pkg/serial/chunker/packet/packet.go#L16).
+3. **Speculative Deserialization**: The chunker presents current buffer bytes to the registered [`packet.Deserializer`](../pkg/serial/chunker/packet/packet.go).
 4. **Resolution**:
    - **`ErrPacketIncomplete`**: The packet header specifies a larger length than currently buffered (e.g. `Info` specifies length 12 or 20, but only 8 bytes have arrived). The loop breaks without consuming bytes and waits for the next OS read (`continue read_loop`).
    - **`ErrPacketInvalid` or Checksum Error**: The buffer contains corrupt framing, an illegal length code, or an invalid checksum. The chunker executes `search()` (`buffer.Next(1)`), which **discards exactly 1 byte** from the head of the buffer, shifting the window forward to re-test the subsequent byte as a potential frame start.
-   - **Success**: A clean, checksum-verified packet is assembled. The chunker invokes [`eject(pkt)`](../pkg/serial/chunker/chunker.go#L57) and calls `reset()` (`buffer.Reset()`), clearing the consumed frame and preparing for the next sequence.
+   - **Success**: A clean, checksum-verified packet is assembled. The chunker invokes [`eject(pkt)`](../pkg/serial/chunker/chunker.go) and calls `reset()` (`buffer.Reset()`), clearing the consumed frame and preparing for the next sequence.
 
 ```mermaid
 flowchart TD

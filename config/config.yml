@@ -2,7 +2,6 @@
 mqtt:
   broker: tcp://mosquitto.internal:1883
   rootTopic: lcn
-  enabled: true
 
 serial:
   port: /dev/ttyUSB0

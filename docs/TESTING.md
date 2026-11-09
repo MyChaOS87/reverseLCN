@@ -30,7 +30,7 @@ Protocol bridges and binary serial chunkers must be tested through **output-orie
 | Real Mosquitto MQTT broker via Podman / Testcontainers               |
 +----------------------------------------------------------------------+
 | Tier 2: In-Memory Component & Pipeline Fakes                         |
-| In-memory pipes (net.Pipe), null.NewBroker(), channel fixtures       |
+| In-memory pipes (net.Pipe), mqtttest.NewBroker() & Simulator         |
 +----------------------------------------------------------------------+
 | Tier 1: Pure Protocol & Chunker Tabular Unit Tests                   |
 | lcn.Deserialize, lcn.Serialize, Chunker.Collect, monitor.DataStore   |
@@ -43,8 +43,8 @@ Protocol bridges and binary serial chunkers must be tested through **output-orie
 - **Target packages**: [`internal/serial/chunker/lcn`](../internal/serial/chunker/lcn/lcn_test.go), [`pkg/serial/chunker`](../pkg/serial/chunker/chunker_test.go), [`internal/monitor`](../internal/monitor).
 
 ### Tier 2: In-Memory Component Fakes
-- **Scope**: Testing [`serial.Port`](../pkg/serial/port.go#L18) and [`broker.Broker`](../pkg/broker/broker.go#L5) coordination without real USB hardware or external brokers.
-- **Fixtures**: Use `net.Pipe()` or in-memory channel-based serial mocks, and [`null.NewBroker()`](../pkg/broker/null/nullBroker.go#L34) to verify context cancellation and queue flushing.
+- **Scope**: Testing [`serial.Port`](../pkg/serial/port.go) and [`mqtt.Broker`](../pkg/broker/mqtt/mqttBroker.go) coordination without real USB hardware or external brokers.
+- **Fixtures**: Use `net.Pipe()` or in-memory channel-based serial mocks, and [`mqtttest.NewBroker()`](../pkg/broker/mqtt/mqtttest/simulator.go) with [`mqtttest.Simulator`](../pkg/broker/mqtt/mqtttest/simulator.go) to verify MQTT subscriptions, reconnect re-subscriptions, publishing, and context cancellation.
 
 ### Tier 3: Container Integration Tests
 - **Scope**: Live end-to-end MQTT connectivity using an external Mosquitto broker.
