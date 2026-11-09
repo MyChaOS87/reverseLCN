@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   reverselcn:
   - apiVersion: v2
+    appVersion: 0.0.3
+    created: "2026-11-09T23:41:38.509860912Z"
+    description: A Helm chart for reverseLCN (lcn2mqtt USB serial to MQTT bridge)
+    digest: 3dd39ac709b54ca35545006f50d54a31b0852076a63d1979ec0f836aa9e7e382
+    name: reverselcn
+    type: application
+    urls:
+    - https://github.com/MyChaOS87/reverseLCN/releases/download/reverselcn-0.0.4/reverselcn-0.0.4.tgz
+    version: 0.0.4
+  - apiVersion: v2
     appVersion: 0.0.2
     created: "2026-11-07T15:02:19.219438117Z"
     description: A Helm chart for reverseLCN (lcn2mqtt USB serial to MQTT bridge)
@@ -31,4 +41,4 @@ entries:
     urls:
     - https://github.com/MyChaOS87/reverseLCN/releases/download/reverselcn-0.0.1/reverselcn-0.0.1.tgz
     version: 0.0.1
-generated: "2026-11-07T15:02:19.219447671Z"
+generated: "2026-11-09T23:41:38.509876602Z"
