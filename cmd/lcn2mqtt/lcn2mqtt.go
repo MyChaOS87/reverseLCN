@@ -5,9 +5,7 @@ import (
 
 	"github.com/MyChaOS87/reverseLCN/internal/cmd"
 	"github.com/MyChaOS87/reverseLCN/internal/serial/chunker/lcn"
-	"github.com/MyChaOS87/reverseLCN/pkg/broker"
 	"github.com/MyChaOS87/reverseLCN/pkg/broker/mqtt"
-	"github.com/MyChaOS87/reverseLCN/pkg/broker/null"
 	"github.com/MyChaOS87/reverseLCN/pkg/log"
 	"github.com/MyChaOS87/reverseLCN/pkg/serial"
 	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/packet"
@@ -17,15 +15,8 @@ func main() {
 	ctx, cancel, cfg := cmd.Init()
 	defer cancel()
 
-	var broker broker.Broker
-	if cfg.Mqtt.Enabled {
-		broker = mqtt.NewBroker(
-			mqtt.Broker(cfg.Mqtt.Broker))
-	} else {
-		broker = null.NewBroker()
-	}
-
-	broker.Run(ctx, cancel)
+	broker := mqtt.NewBroker(
+		mqtt.BrokerURL(cfg.Mqtt.Broker))
 
 	port := serial.NewPort(
 		serial.BaudRate(cfg.Serial.BaudRate),
@@ -35,14 +26,16 @@ func main() {
 	port.Run(ctx, cancel, func(pkt packet.Packet) {
 		log.Infof("%s", pkt.ToNiceString())
 
-		if lcn, ok := pkt.(*lcn.Packet); ok {
-			broker.
+		if lcnPkt, ok := pkt.(*lcn.Packet); ok {
+			if err := broker.
 				Topic(
 					fmt.Sprintf("%s/segment/%d/target/%d/",
 						cfg.Mqtt.RootTopic,
-						lcn.Seg,
-						lcn.Dst)).
-				Publish(lcn)
+						lcnPkt.Seg,
+						lcnPkt.Dst)).
+				Publish(lcnPkt); err != nil {
+				log.Errorf("Could not publish LCN packet: %v", err)
+			}
 		} else {
 			log.Debug("Not a LCN Packet")
 		}
@@ -52,24 +45,20 @@ func main() {
 		fmt.Sprintf(
 			"%s/in",
 			cfg.Mqtt.RootTopic)).
-		Subscribe(lcn.Packet{}, func(_ string, data any) {
-			if pkt, ok := data.(*lcn.Packet); ok {
-				log.Infof("MQTT callback got LCN: %s", pkt.ToNiceString())
+		Subscribe(func(_ string, pkt lcn.Packet) {
+			log.Infof("MQTT callback got LCN: %s", pkt.ToNiceString())
 
-				buf, err := pkt.Serialize()
-				if err != nil {
-					log.Error("Could not Serialize LCN: %s", pkt.ToNiceString())
+			buf, err := pkt.Serialize()
+			if err != nil {
+				log.Errorf("Could not Serialize LCN (%s): %v", pkt.ToNiceString(), err)
 
-					return
-				}
-
-				go port.Send(buf)
-			} else {
-				log.Errorf("Could not interpret MQTT: %s", data)
+				return
 			}
+
+			go port.Send(buf)
 		})
 
-	<-ctx.Done()
-
-	log.Errorf("context done: %s", ctx.Err().Error())
+	if err := broker.Run(ctx); err != nil {
+		log.Errorf("mqtt broker stopped with error: %v", err)
+	}
 }

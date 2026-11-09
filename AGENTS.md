@@ -22,7 +22,7 @@ Consult these dedicated documents for detailed technical specifications and patt
 
 | Document | Scope & When to Read |
 |---|---|
-| [`CONTEXT.md`](./CONTEXT.md) | **Domain Glossary & Ubiquitous Language**: Definitions of `LCN-PKU`, physical packet frames (6/8/12/20 bytes), bit-mirrored [`Src`](./internal/serial/chunker/lcn/lcn.go#L35), `Info` length mask (`0x0C`), rotated-sum [`Checksum`](./internal/serial/chunker/lcn/lcn.go#L160), [`packet.Packet`](./pkg/serial/chunker/packet/packet.go#L10), [`chunker.Chunker`](./pkg/serial/chunker/chunker.go#L19), [`serial.Port`](./pkg/serial/port.go#L18), [`broker.Broker`](./pkg/broker/broker.go#L5), and [`monitor.DataStore`](./internal/monitor/datastore.go#L14). |
+| [`CONTEXT.md`](./CONTEXT.md) | **Domain Glossary & Ubiquitous Language**: Definitions of `LCN-PKU`, physical packet frames (6/8/12/20 bytes), bit-mirrored [`Src`](./internal/serial/chunker/lcn/lcn.go), `Info` length mask (`0x0C`), rotated-sum [`Checksum`](./internal/serial/chunker/lcn/lcn.go), [`packet.Packet`](./pkg/serial/chunker/packet/packet.go), [`chunker.Chunker`](./pkg/serial/chunker/chunker.go), [`serial.Port`](./pkg/serial/port.go), [`mqtt.Broker`](./pkg/broker/mqtt/mqttBroker.go), and [`monitor.DataStore`](./internal/monitor/datastore.go). |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | **System Architecture**: Dual-binary architecture, package DAG (`pkg/` vs `internal/` boundary), bidirectional bridge sequence diagram, sliding-window chunker resynchronization state machine, and multi-stage `FROM scratch` container builds. |
 | [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md) | **Coding Idioms & Standards**: Go 1.27 conventions, bitwise mask constants, sentinel error wrapping (`%w`), functional options for serial and MQTT brokers, Viper environment mapping (`LCN_*`), and commit conventions. |
 | [`docs/TESTING.md`](./docs/TESTING.md) | **Test Philosophy & Compliance**: Output-oriented tabular testing for binary protocols, 3-tier testing model, `t.Parallel()` and `t.Context()` compliance, and test assertion ordering. |
@@ -62,3 +62,4 @@ Prefer running commands in the default sandboxed environment (`BypassSandbox: fa
    ```
    replace <module> <vulnerable-version> => <module> <fixed-version> // fix <CVE-ID>
    ```
+7. **Never include line-number anchors in repository documentation links**: Never use `#L<line>` fragments in Markdown links inside `AGENTS.md`, `CONTEXT.md`, or `docs/*.md`, as line numbers drift on edits and become stale. Link to the file path only.

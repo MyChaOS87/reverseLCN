@@ -25,7 +25,7 @@ Every LCN message on the serial bus is a binary packet of 6, 8, 12, or 20 bytes.
 ### Bit-Mirrored Source (`mirrorSrc`)
 On the wire, the source address byte (`buf[0]`) has its bits reversed by the hardware/coupler: bit 0 swaps with bit 7, bit 1 with bit 6, bit 2 with bit 5, and bit 3 with bit 4.
 For example, a source module ID of `1` (`0b00000001`) is represented on the wire as `0x80` (`0b10000000`).
-The helper function [`mirrorSrc`](./internal/serial/chunker/lcn/lcn.go#L148) performs this 8-bit mirror transformation bidirectionally:
+The helper function [`mirrorSrc`](./internal/serial/chunker/lcn/lcn.go) performs this 8-bit mirror transformation bidirectionally:
 ```go
 func mirrorSrc(in byte) byte {
     src := byte(0)
@@ -60,13 +60,13 @@ The calculated checksum must exactly match byte `2` of incoming packets during d
 
 ## Protocol & Chunking Domain
 
-### [`packet.Packet`](./pkg/serial/chunker/packet/packet.go#L10)
+### [`packet.Packet`](./pkg/serial/chunker/packet/packet.go)
 An interface representing any discrete protocol packet capable of serialization and human-readable formatting:
 - `Serialize() ([]byte, error)`: Converts the packet structure into raw wire bytes (calculating checksums and lengths).
 - `ToString() string`: Detailed diagnostic string displaying all packet fields in hexadecimal.
 - `ToNiceString() string`: Formatted concise summary emphasizing source, destination, command, and payload.
 
-### [`lcn.Packet`](./internal/serial/chunker/lcn/lcn.go#L34)
+### [`lcn.Packet`](./internal/serial/chunker/lcn/lcn.go)
 The concrete Go struct representing an LCN frame:
 ```go
 type Packet struct {
@@ -80,15 +80,15 @@ type Packet struct {
 }
 ```
 
-### [`packet.Deserializer`](./pkg/serial/chunker/packet/packet.go#L16)
-A function signature `func(buf []byte) (Packet, error)` that attempts to parse a raw byte slice into a typed packet. [`lcn.Deserialize`](./internal/serial/chunker/lcn/lcn.go#L74) is the primary deserializer for LCN traffic.
+### [`packet.Deserializer`](./pkg/serial/chunker/packet/packet.go)
+A function signature `func(buf []byte) (Packet, error)` that attempts to parse a raw byte slice into a typed packet. [`lcn.Deserialize`](./internal/serial/chunker/lcn/lcn.go) is the primary deserializer for LCN traffic.
 
 ### `ErrPacketIncomplete` vs `ErrPacketInvalid`
 The chunking engine distinguishes between partial frames and corrupt data using wrapped sentinel errors:
-- [`packet.ErrPacketIncomplete`](./pkg/serial/chunker/packet/packet.go#L6) (wrapped by `ErrLcnPacketIncomplete`): The buffer contains fewer bytes than the minimum packet length (6) or fewer bytes than indicated by the `Info` length code. The chunker must **continue accumulating** incoming bytes.
-- [`packet.ErrPacketInvalid`](./pkg/serial/chunker/packet/packet.go#L7) (wrapped by `ErrLcnPacketInvalid` and `ErrLcnPacketInvalidChecksum`): The buffer contains an illegal length, an invalid length code, or a mismatched checksum. The chunker must **advance its search window by 1 byte** to discard noise and re-synchronize to the next valid frame boundary.
+- [`packet.ErrPacketIncomplete`](./pkg/serial/chunker/packet/packet.go) (wrapped by `ErrLcnPacketIncomplete`): The buffer contains fewer bytes than the minimum packet length (6) or fewer bytes than indicated by the `Info` length code. The chunker must **continue accumulating** incoming bytes.
+- [`packet.ErrPacketInvalid`](./pkg/serial/chunker/packet/packet.go) (wrapped by `ErrLcnPacketInvalid` and `ErrLcnPacketInvalidChecksum`): The buffer contains an illegal length, an invalid length code, or a mismatched checksum. The chunker must **advance its search window by 1 byte** to discard noise and re-synchronize to the next valid frame boundary.
 
-### [`chunker.Chunker`](./pkg/serial/chunker/chunker.go#L19) & [`chunker.EjectFunc`](./pkg/serial/chunker/chunker.go#L17)
+### [`chunker.Chunker`](./pkg/serial/chunker/chunker.go) & [`chunker.EjectFunc`](./pkg/serial/chunker/chunker.go)
 - `EjectFunc`: Callback `func(packet.Packet)` invoked when a valid packet is completely assembled.
 - `Chunker`: Interface `Collect(buf []byte, eject EjectFunc)`. Manages an internal `bytes.Buffer`, slicing through serial chunks, handling fragmentation across OS read boundaries, and discarding corrupt noise bytes until a clean frame emerges.
 
@@ -96,32 +96,37 @@ The chunking engine distinguishes between partial frames and corrupt data using 
 
 ## Serial & Broker Domain
 
-### [`serial.Port`](./pkg/serial/port.go#L18)
+### [`serial.Port`](./pkg/serial/port.go)
 The serial communication abstraction managing asynchronous USB tty read and write loops:
 - `Run(ctx context.Context, cancel context.CancelFunc, eject chunker.EjectFunc)`: Spawns the background reader goroutine (feeding raw bytes into the chunker) and the writer goroutine.
 - `Send(buf []byte)`: Non-blocking enqueue to `sendQueue chan []byte` for transmission onto the physical wire.
 
-### [`broker.Broker`](./pkg/broker/broker.go#L5) & [`broker.Topic`](./pkg/broker/broker.go#L10)
-High-level pub/sub abstraction decoupling the application from specific messaging implementations:
-- `Broker`: Controls lifecycle (`Run`) and topic resolution (`Topic(name)`).
-- `Topic`: Provides typed publish/subscribe primitives:
-  - `Publish(interface{})`: Encodes data to JSON and publishes with QoS 1.
-  - `PublishString(string)`: Publishes raw text.
-  - `Subscribe(hint interface{}, callback CallbackFunction)`: Subscribes with QoS 0, unmarshals incoming JSON payloads into the type supplied by `hint` (using reflection), and triggers the callback.
-- [`nullBroker`](./pkg/broker/null/nullBroker.go#L10): A no-op implementation activated when MQTT is disabled in configuration.
-- [`mqttBroker`](./pkg/broker/mqtt/mqttBroker.go#L24): Paho MQTT implementation connecting to external brokers (e.g., Mosquitto).
+### [`mqtt.Broker`](./pkg/broker/mqtt/mqttBroker.go)
+The concrete MQTT broker client backed by the Eclipse Paho MQTT client (`github.com/eclipse/paho.mqtt.golang`):
+- `Run(ctx context.Context) error`: Connects to the broker, re-subscribes all registered handlers on every connection/reconnection, blocks until `ctx` is cancelled, and disconnects cleanly before returning.
+- `Topic(topicName string) *Topic`: Returns a handle (`*mqtt.Topic`) for pub/sub operations on a named topic.
+
+### [`mqtt.Topic`](./pkg/broker/mqtt/mqttBroker.go)
+Represents an addressable MQTT topic with generic subscribe and publish operations:
+- `PublishString(s string)`: Publishes a raw string payload with QoS 1.
+- `Publish(data any) error`: Marshals `data` to JSON (returning any marshal error synchronously) and publishes the resulting string with QoS 1.
+- `Subscribe[T any](callback CallbackFunction[T])`: Registers a persistent subscription (QoS 0, re-subscribed automatically on broker reconnect) that unmarshals incoming JSON message payloads directly into a value of type `T` (`var payload T`) and invokes `callback(topic, payload)`.
+
+### [`mqtt.Error`](./pkg/broker/mqtt/error.go) & [`mqtttest.Simulator`](./pkg/broker/mqtt/mqtttest/simulator.go)
+- `mqtt.Error`: Structured error (`OpSubscribe`, `OpPublish`, `OpUnmarshal`) carrying `Op`, `Topic`, raw `Payload`, and underlying `Err` (implementing `Error()` and `Unwrap()`), delivered to the configurable `mqtt.OnError(handler)` callback.
+- `mqtttest.Simulator` & `mqtttest.NewBroker`: Reusable in-memory Paho test harness in `pkg/broker/mqtt/mqtttest` separating the unexported `paho.Client` mock implementation (`client.go`) from simulation controls (`SimulateConnect`, `SimulateDisconnect`, `SimulateReconnect`, `Deliver`, `SubscribedTopics`, `PublishedMessages`, `Disconnected`, `DeferOnConnect`).
 
 ---
 
 ## Monitoring & Telemetry Domain
 
-### [`monitor.DataStore`](./internal/monitor/datastore.go#L14)
+### [`monitor.DataStore`](./internal/monitor/datastore.go)
 A thread-safe in-memory cache protected by a `sync.Mutex`. Stores unique messages keyed by their string representation, tracking total occurrences (`times`) and the `lastSeen` timestamp.
 
 ### Payload Decoders
 Specialized parsers in [`internal/monitor/parsers.go`](./internal/monitor/parsers.go) that convert raw byte payloads into descriptive human telemetry:
-- [`decodeRelais`](./internal/monitor/parsers.go#L34) (Command `0x13`): Interprets 8 relay bitmask channels on actuator modules. Determines whether a channel is commanded to `FORCE ON`, `FORCE OFF`, or `TOGGLE`.
-- [`decodeStatusReport`](./internal/monitor/parsers.go#L59) (Command `0x68`): Decodes module status broadcasts sent to the host display (ID `4`), identifying active relay channels.
-- [`decodeStatusQuery`](./internal/monitor/parsers.go#L75) (Command `0x6E`): Parses status inquiries (`0xFB` for query, `0x7B` for report) and maps active bit channels to friendly appliance labels.
-- [`idMap`](./internal/monitor/mappings.go#L6) & [`moduleOutputs`](./internal/monitor/mappings.go#L18): Static lookup tables that map numeric module IDs (e.g., `33` -> `R8H 33 - Licht A`) and channel indices (e.g., `33-0` -> `Strahler Wohnen/Essen`) to physical installation names.
-- [`mapIfPossible`](./internal/monitor/mappings.go#L51): Formats an ID or fallback integer into a readable name.
+- [`decodeRelais`](./internal/monitor/parsers.go) (Command `0x13`): Interprets 8 relay bitmask channels on actuator modules. Determines whether a channel is commanded to `FORCE ON`, `FORCE OFF`, or `TOGGLE`.
+- [`decodeStatusReport`](./internal/monitor/parsers.go) (Command `0x68`): Decodes module status broadcasts sent to the host display (ID `4`), identifying active relay channels.
+- [`decodeStatusQuery`](./internal/monitor/parsers.go) (Command `0x6E`): Parses status inquiries (`0xFB` for query, `0x7B` for report) and maps active bit channels to friendly appliance labels.
+- [`idMap`](./internal/monitor/mappings.go) & [`moduleOutputs`](./internal/monitor/mappings.go): Static lookup tables that map numeric module IDs (e.g., `33` -> `R8H 33 - Licht A`) and channel indices (e.g., `33-0` -> `Strahler Wohnen/Essen`) to physical installation names.
+- [`mapIfPossible`](./internal/monitor/mappings.go): Formats an ID or fallback integer into a readable name.
