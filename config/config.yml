@@ -14,3 +14,13 @@ logger:
   encoding: console
   level: info
 
+# Optional human-readable LCN module and output labels for lcnMonitor:
+# monitor:
+#   idMap:
+#     4: Display
+#     11: Switch Kitchen
+#     33: R8H 33 - Relay A
+#   moduleOutputs:
+#     33:
+#       0: Relay Living Room
+

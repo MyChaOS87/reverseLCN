@@ -13,15 +13,15 @@ type ExportedMessage struct {
 	Formatted string
 }
 
-func ParsePayloadIfPossible(src, dst, cmd int, payload []byte) string {
-	return parsePayloadIfPossible(src, dst, cmd, payload)
+func ParsePayloadIfPossible(moduleOutputs map[int]map[int]string, src, dst, cmd int, payload []byte) string {
+	return parsePayloadIfPossible(moduleOutputs, src, dst, cmd, payload)
 }
 
 func CheckDigit(b byte, out int) bool {
 	return testDigit(b, out)
 }
 
-func MapIDIfPossible(value int) string {
+func MapIDIfPossible(idMap map[int]string, value int) string {
 	return mapIfPossible(idMap, value)
 }
 
@@ -29,8 +29,8 @@ func MapCmdIfPossible(value int) string {
 	return mapIfPossible(cmdMap, value)
 }
 
-func MapOutputIfPossible(module, output int) string {
-	return mapOutputIfPossible(module, output)
+func MapOutputIfPossible(moduleOutputs map[int]map[int]string, module, output int) string {
+	return mapOutputIfPossible(moduleOutputs, module, output)
 }
 
 func (d *DataStore) GetLast(n int) []ExportedMessage {
@@ -42,7 +42,7 @@ func (d *DataStore) GetLast(n int) []ExportedMessage {
 			Packet:    msgs[i].Packet,
 			LastSeen:  msgs[i].lastSeen,
 			Times:     msgs[i].times,
-			Formatted: msgs[i].toString(),
+			Formatted: d.formatMessage(&msgs[i]),
 		})
 	}
 
@@ -53,5 +53,5 @@ func (d *DataStore) RenderData() [][]string {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	return renderData(d.messages)
+	return d.renderData()
 }

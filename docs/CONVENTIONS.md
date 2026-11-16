@@ -191,7 +191,7 @@ func LoadConfig(filename string) (*viper.Viper, error) {
 }
 ```
 
-### Environment Variable Rules
+### Environment Variable Rules & Optional Monitor Mappings
 Nested configuration keys map to environment variables prefixed with `LCN_`:
 - `serial.port` -> `LCN_SERIAL_PORT`
 - `serial.baudRate` -> `LCN_SERIAL_BAUDRATE`
@@ -199,6 +199,8 @@ Nested configuration keys map to environment variables prefixed with `LCN_`:
 - `mqtt.rootTopic` -> `LCN_MQTT_ROOTTOPIC`
 - `logger.level` -> `LCN_LOGGER_LEVEL`
 - `logger.development` -> `LCN_LOGGER_DEVELOPMENT`
+
+Optional `lcnMonitor` human-readable module and channel labels can be provided in `config.yml` under `monitor.idMap` (`map[int]string`) and `monitor.moduleOutputs` (`map[int]map[int]string`); when omitted, numeric module and output IDs are printed directly.
 
 ---
 

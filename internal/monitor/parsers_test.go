@@ -9,191 +9,249 @@ import (
 	"github.com/MyChaOS87/reverseLCN/internal/monitor"
 )
 
+func syntheticIDMap() map[int]string {
+	return map[int]string{
+		4:  "Display",
+		33: "R8H 33 - Relay A",
+	}
+}
+
+func syntheticModuleOutputs() map[int]map[int]string {
+	return map[int]map[int]string{
+		33: {
+			0: "Relay Living Room",
+			1: "Light Living Room",
+		},
+		34: {
+			0: "Light Kitchen 1",
+			2: "Light Kitchen 2",
+			4: "Light Corridor",
+		},
+		35: {
+			0: "Dimmer Dining",
+			1: "Dimmer Kitchen",
+		},
+	}
+}
+
 func TestParsePayloadIfPossible(t *testing.T) {
 	t.Parallel()
 
+	moduleOutputs := syntheticModuleOutputs()
+
 	tests := []struct {
-		name     string
-		src      int
-		dst      int
-		cmd      int
-		payload  []byte
-		expected string
+		name          string
+		moduleOutputs map[int]map[int]string
+		src           int
+		dst           int
+		cmd           int
+		payload       []byte
+		expected      string
 	}{
 		// 0x13: decodeRelais
 		{
-			name:     "relais mapped module force off",
-			src:      11,
-			dst:      33,
-			cmd:      0x13,
-			payload:  []byte{0b00000001, 0b00000001},
-			expected: "<Relay Living Room: FORCE OFF>",
+			name:          "relais mapped module force off",
+			moduleOutputs: moduleOutputs,
+			src:           11,
+			dst:           33,
+			cmd:           0x13,
+			payload:       []byte{0b00000001, 0b00000001},
+			expected:      "<Relay Living Room: FORCE OFF>",
 		},
 		{
-			name:     "relais mapped module force on",
-			src:      11,
-			dst:      33,
-			cmd:      0x13,
-			payload:  []byte{0b00000010, 0b00000000},
-			expected: "<Light Living Room 1: FORCE ON>",
+			name:          "relais mapped module force on",
+			moduleOutputs: moduleOutputs,
+			src:           11,
+			dst:           33,
+			cmd:           0x13,
+			payload:       []byte{0b00000010, 0b00000000},
+			expected:      "<Light Living Room: FORCE ON>",
 		},
 		{
-			name:     "relais mapped module toggle",
-			src:      11,
-			dst:      34,
-			cmd:      0x13,
-			payload:  []byte{0b00000000, 0b00000001},
-			expected: "<Light Kitchen 1: TOGGLE>",
+			name:          "relais mapped module toggle",
+			moduleOutputs: moduleOutputs,
+			src:           11,
+			dst:           34,
+			cmd:           0x13,
+			payload:       []byte{0b00000000, 0b00000001},
+			expected:      "<Light Kitchen 1: TOGGLE>",
 		},
 		{
-			name:     "relais multiple outputs mixed",
-			src:      11,
-			dst:      35,
-			cmd:      0x13,
-			payload:  []byte{0b00000001, 0b00000010},
-			expected: "<Dimmer Dining: FORCE ON>,<Dimmer Kitchen: TOGGLE>",
+			name:          "relais multiple outputs mixed",
+			moduleOutputs: moduleOutputs,
+			src:           11,
+			dst:           35,
+			cmd:           0x13,
+			payload:       []byte{0b00000001, 0b00000010},
+			expected:      "<Dimmer Dining: FORCE ON>,<Dimmer Kitchen: TOGGLE>",
 		},
 		{
-			name:     "relais unmapped module and unmapped output",
-			src:      11,
-			dst:      99,
-			cmd:      0x13,
-			payload:  []byte{0b00000001, 0b00000001},
-			expected: "<99-0: FORCE OFF>",
+			name:          "relais nil outputs map fallback",
+			moduleOutputs: nil,
+			src:           11,
+			dst:           33,
+			cmd:           0x13,
+			payload:       []byte{0b00000001, 0b00000001},
+			expected:      "<33-0: FORCE OFF>",
 		},
 		{
-			name:     "relais mapped module unmapped output bit 4",
-			src:      11,
-			dst:      33,
-			cmd:      0x13,
-			payload:  []byte{0b00010000, 0b00000000},
-			expected: "<33-4: FORCE ON>",
+			name:          "relais unmapped module and unmapped output",
+			moduleOutputs: moduleOutputs,
+			src:           11,
+			dst:           99,
+			cmd:           0x13,
+			payload:       []byte{0b00000001, 0b00000001},
+			expected:      "<99-0: FORCE OFF>",
 		},
 		{
-			name:     "relais nil payload fallback",
-			src:      11,
-			dst:      33,
-			cmd:      0x13,
-			payload:  nil,
-			expected: "",
+			name:          "relais mapped module unmapped output bit 4",
+			moduleOutputs: moduleOutputs,
+			src:           11,
+			dst:           33,
+			cmd:           0x13,
+			payload:       []byte{0b00010000, 0b00000000},
+			expected:      "<33-4: FORCE ON>",
 		},
 		{
-			name:     "relais empty payload fallback",
-			src:      11,
-			dst:      33,
-			cmd:      0x13,
-			payload:  []byte{},
-			expected: "",
+			name:          "relais nil payload fallback",
+			moduleOutputs: moduleOutputs,
+			src:           11,
+			dst:           33,
+			cmd:           0x13,
+			payload:       nil,
+			expected:      "",
 		},
 		{
-			name:     "relais short 1-byte payload fallback",
-			src:      11,
-			dst:      33,
-			cmd:      0x13,
-			payload:  []byte{0x01},
-			expected: "01",
+			name:          "relais empty payload fallback",
+			moduleOutputs: moduleOutputs,
+			src:           11,
+			dst:           33,
+			cmd:           0x13,
+			payload:       []byte{},
+			expected:      "",
+		},
+		{
+			name:          "relais short 1-byte payload fallback",
+			moduleOutputs: moduleOutputs,
+			src:           11,
+			dst:           33,
+			cmd:           0x13,
+			payload:       []byte{0x01},
+			expected:      "01",
 		},
 
 		// 0x68: decodeStatusReport
 		{
-			name:     "statusReport valid 0x30 dst 4 single output",
-			src:      33,
-			dst:      4,
-			cmd:      0x68,
-			payload:  []byte{0x30, 0b00000011},
-			expected: "Relay Living Room,Light Living Room 1",
+			name:          "statusReport valid 0x30 dst 4 single output",
+			moduleOutputs: moduleOutputs,
+			src:           33,
+			dst:           4,
+			cmd:           0x68,
+			payload:       []byte{0x30, 0b00000011},
+			expected:      "Relay Living Room,Light Living Room",
 		},
 		{
-			name:     "statusReport valid 0x30 dst 4 zero active outputs",
-			src:      33,
-			dst:      4,
-			cmd:      0x68,
-			payload:  []byte{0x30, 0x00},
-			expected: "",
+			name:          "statusReport valid 0x30 dst 4 zero active outputs",
+			moduleOutputs: moduleOutputs,
+			src:           33,
+			dst:           4,
+			cmd:           0x68,
+			payload:       []byte{0x30, 0x00},
+			expected:      "",
 		},
 		{
-			name:     "statusReport non-0x30 first byte fallback",
-			src:      33,
-			dst:      4,
-			cmd:      0x68,
-			payload:  []byte{0x31, 0x01},
-			expected: "3101",
+			name:          "statusReport non-0x30 first byte fallback",
+			moduleOutputs: moduleOutputs,
+			src:           33,
+			dst:           4,
+			cmd:           0x68,
+			payload:       []byte{0x31, 0x01},
+			expected:      "3101",
 		},
 		{
-			name:     "statusReport dst not 4 fallback",
-			src:      33,
-			dst:      11,
-			cmd:      0x68,
-			payload:  []byte{0x30, 0x01},
-			expected: "3001",
+			name:          "statusReport dst not 4 fallback",
+			moduleOutputs: moduleOutputs,
+			src:           33,
+			dst:           11,
+			cmd:           0x68,
+			payload:       []byte{0x30, 0x01},
+			expected:      "3001",
 		},
 		{
-			name:     "statusReport nil payload fallback",
-			src:      33,
-			dst:      4,
-			cmd:      0x68,
-			payload:  nil,
-			expected: "",
+			name:          "statusReport nil payload fallback",
+			moduleOutputs: moduleOutputs,
+			src:           33,
+			dst:           4,
+			cmd:           0x68,
+			payload:       nil,
+			expected:      "",
 		},
 		{
-			name:     "statusReport short 1-byte payload fallback",
-			src:      33,
-			dst:      4,
-			cmd:      0x68,
-			payload:  []byte{0x30},
-			expected: "30",
+			name:          "statusReport short 1-byte payload fallback",
+			moduleOutputs: moduleOutputs,
+			src:           33,
+			dst:           4,
+			cmd:           0x68,
+			payload:       []byte{0x30},
+			expected:      "30",
 		},
 
 		// 0x6E: decodeStatusQuery
 		{
-			name:     "statusQuery 0xFB query uses dst module",
-			src:      4,
-			dst:      34,
-			cmd:      0x6E,
-			payload:  []byte{0xFB, 0b00010101},
-			expected: "QUERY: Light Kitchen 1,Light Kitchen 2,Light Auxiliary 3",
+			name:          "statusQuery 0xFB query uses dst module",
+			moduleOutputs: moduleOutputs,
+			src:           4,
+			dst:           34,
+			cmd:           0x6E,
+			payload:       []byte{0xFB, 0b00010101},
+			expected:      "QUERY: Light Kitchen 1,Light Kitchen 2,Light Corridor",
 		},
 		{
-			name:     "statusQuery 0x7b report uses src module",
-			src:      35,
-			dst:      4,
-			cmd:      0x6E,
-			payload:  []byte{0x7b, 0b00000011},
-			expected: "REPORT: Dimmer Dining,Dimmer Kitchen",
+			name:          "statusQuery 0x7b report uses src module",
+			moduleOutputs: moduleOutputs,
+			src:           35,
+			dst:           4,
+			cmd:           0x6E,
+			payload:       []byte{0x7b, 0b00000011},
+			expected:      "REPORT: Dimmer Dining,Dimmer Kitchen",
 		},
 		{
-			name:     "statusQuery unknown sub-command fallback",
-			src:      35,
-			dst:      4,
-			cmd:      0x6E,
-			payload:  []byte{0x00, 0x01},
-			expected: "0001",
+			name:          "statusQuery unknown sub-command fallback",
+			moduleOutputs: moduleOutputs,
+			src:           35,
+			dst:           4,
+			cmd:           0x6E,
+			payload:       []byte{0x00, 0x01},
+			expected:      "0001",
 		},
 		{
-			name:     "statusQuery nil payload fallback",
-			src:      35,
-			dst:      4,
-			cmd:      0x6E,
-			payload:  nil,
-			expected: "",
+			name:          "statusQuery nil payload fallback",
+			moduleOutputs: moduleOutputs,
+			src:           35,
+			dst:           4,
+			cmd:           0x6E,
+			payload:       nil,
+			expected:      "",
 		},
 		{
-			name:     "statusQuery short 1-byte payload fallback",
-			src:      35,
-			dst:      4,
-			cmd:      0x6E,
-			payload:  []byte{0xFB},
-			expected: "fb",
+			name:          "statusQuery short 1-byte payload fallback",
+			moduleOutputs: moduleOutputs,
+			src:           35,
+			dst:           4,
+			cmd:           0x6E,
+			payload:       []byte{0xFB},
+			expected:      "fb",
 		},
 
 		// Unknown command fallback
 		{
-			name:     "unknown command default hex parser",
-			src:      1,
-			dst:      4,
-			cmd:      0x99,
-			payload:  []byte{0xde, 0xad, 0xbe, 0xef},
-			expected: "deadbeef",
+			name:          "unknown command default hex parser",
+			moduleOutputs: moduleOutputs,
+			src:           1,
+			dst:           4,
+			cmd:           0x99,
+			payload:       []byte{0xde, 0xad, 0xbe, 0xef},
+			expected:      "deadbeef",
 		},
 	}
 
@@ -201,7 +259,7 @@ func TestParsePayloadIfPossible(t *testing.T) {
 		t.Run(fmt.Sprintf("%s_%s", t.Name(), tt.name), func(t *testing.T) {
 			t.Parallel()
 
-			got := monitor.ParsePayloadIfPossible(tt.src, tt.dst, tt.cmd, tt.payload)
+			got := monitor.ParsePayloadIfPossible(tt.moduleOutputs, tt.src, tt.dst, tt.cmd, tt.payload)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
@@ -266,21 +324,26 @@ func TestDigitBounds(t *testing.T) {
 func TestMappings(t *testing.T) {
 	t.Parallel()
 
+	idMap := syntheticIDMap()
+	moduleOutputs := syntheticModuleOutputs()
+
 	idTests := []struct {
 		name     string
+		idMap    map[int]string
 		id       int
 		expected string
 	}{
-		{name: "known Display", id: 4, expected: "Display"},
-		{name: "known module 33", id: 33, expected: "R8H 33 - Relay A"},
-		{name: "unknown module 99", id: 99, expected: "99"},
+		{name: "known Display", idMap: idMap, id: 4, expected: "Display"},
+		{name: "known module 33", idMap: idMap, id: 33, expected: "R8H 33 - Relay A"},
+		{name: "unknown module 99", idMap: idMap, id: 99, expected: "99"},
+		{name: "nil map fallback", idMap: nil, id: 33, expected: "33"},
 	}
 
 	for _, tt := range idTests {
 		t.Run(fmt.Sprintf("%s_id_%s", t.Name(), tt.name), func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.expected, monitor.MapIDIfPossible(tt.id))
+			assert.Equal(t, tt.expected, monitor.MapIDIfPossible(tt.idMap, tt.id))
 		})
 	}
 
@@ -304,21 +367,23 @@ func TestMappings(t *testing.T) {
 	}
 
 	outTests := []struct {
-		name     string
-		module   int
-		output   int
-		expected string
+		name          string
+		moduleOutputs map[int]map[int]string
+		module        int
+		output        int
+		expected      string
 	}{
-		{name: "mapped module and output", module: 33, output: 0, expected: "Relay Living Room"},
-		{name: "mapped module unmapped output", module: 33, output: 4, expected: "33-4"},
-		{name: "unmapped module", module: 99, output: 0, expected: "99-0"},
+		{name: "mapped module and output", moduleOutputs: moduleOutputs, module: 33, output: 0, expected: "Relay Living Room"},
+		{name: "mapped module unmapped output", moduleOutputs: moduleOutputs, module: 33, output: 4, expected: "33-4"},
+		{name: "unmapped module", moduleOutputs: moduleOutputs, module: 99, output: 0, expected: "99-0"},
+		{name: "nil map fallback", moduleOutputs: nil, module: 33, output: 0, expected: "33-0"},
 	}
 
 	for _, tt := range outTests {
 		t.Run(fmt.Sprintf("%s_out_%s", t.Name(), tt.name), func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.expected, monitor.MapOutputIfPossible(tt.module, tt.output))
+			assert.Equal(t, tt.expected, monitor.MapOutputIfPossible(tt.moduleOutputs, tt.module, tt.output))
 		})
 	}
 }

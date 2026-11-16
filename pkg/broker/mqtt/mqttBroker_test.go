@@ -297,12 +297,12 @@ func TestBrokerPublish(t *testing.T) {
 	tests := publishTestCases{
 		{
 			name:     "PublishString sends plain payload with QoS 1",
-			topic:    "device-switch/command/switch:0",
+			topic:    "device/switch/command:0",
 			isString: true,
 			payload:  "on",
 			expectedRecords: []mqtttest.PublishedMessage{
 				{
-					Topic:   "device-switch/command/switch:0",
+					Topic:   "device/switch/command:0",
 					QoS:     1,
 					Retain:  false,
 					Payload: "on",

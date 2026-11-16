@@ -12,8 +12,10 @@ import (
 )
 
 type DataStore struct {
-	messages map[string]*message
-	mutex    sync.Mutex
+	messages      map[string]*message
+	idMap         map[int]string
+	moduleOutputs map[int]map[int]string
+	mutex         sync.Mutex
 }
 
 type message struct {
@@ -33,7 +35,7 @@ func (d *DataStore) Add(pkt lcn.Packet) {
 	if v, ok := d.messages[key]; ok {
 		v.update(now)
 
-		log.Infof("UPD: %s", v.toString())
+		log.Infof("UPD: %s", d.formatMessage(v))
 	} else {
 		m := message{
 			Packet:   pkt,
@@ -42,7 +44,7 @@ func (d *DataStore) Add(pkt lcn.Packet) {
 		}
 		d.messages[key] = &m
 
-		log.Infof("ADD: %s", m.toString())
+		log.Infof("ADD: %s", d.formatMessage(&m))
 	}
 }
 
@@ -67,23 +69,31 @@ func (m *message) update(lastSeen time.Time) {
 	m.times++
 }
 
-func (m *message) toString() string {
+func (d *DataStore) formatMessage(m *message) string {
 	const lineLength = 7
 
 	line := make([]string, 0, lineLength)
 	line = append(line, m.lastSeen.Local().Format("2006-01-02 15:04:05 MST"))
 	line = append(line, fmt.Sprintf("%d", m.times))
-	line = append(line, mapIfPossible(idMap, int(m.Src)))
+	line = append(line, mapIfPossible(d.idMap, int(m.Src)))
 	line = append(line, fmt.Sprintf("%d", m.Seg))
-	line = append(line, mapIfPossible(idMap, int(m.Dst)))
+	line = append(line, mapIfPossible(d.idMap, int(m.Dst)))
 	line = append(line, mapIfPossible(cmdMap, int(m.Cmd)))
-	line = append(line, parsePayloadIfPossible(int(m.Src), int(m.Dst), int(m.Cmd), m.Payload))
+	line = append(line, parsePayloadIfPossible(d.moduleOutputs, int(m.Src), int(m.Dst), int(m.Cmd), m.Payload))
 
 	return strings.Join(line, "\t")
 }
 
-func NewDataStore() *DataStore {
-	return &DataStore{
+func NewDataStore(opts ...Option) *DataStore {
+	ds := &DataStore{
 		messages: make(map[string]*message),
 	}
+
+	for _, opt := range opts {
+		if opt != nil {
+			opt(ds)
+		}
+	}
+
+	return ds
 }

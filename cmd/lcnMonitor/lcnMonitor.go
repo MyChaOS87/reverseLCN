@@ -17,7 +17,10 @@ func main() {
 	broker := mqtt.NewBroker(
 		mqtt.BrokerURL(cfg.Mqtt.Broker))
 
-	dataStore := monitor.NewDataStore()
+	dataStore := monitor.NewDataStore(
+		monitor.WithIDMap(cfg.Monitor.IDMap),
+		monitor.WithModuleOutputs(cfg.Monitor.ModuleOutputs),
+	)
 
 	broker.Topic(fmt.Sprintf(
 		"%s/#",

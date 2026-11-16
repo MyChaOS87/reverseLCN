@@ -15,9 +15,9 @@ func defaultPayloadParser(_, _ int, payload []byte) string {
 	return hex.EncodeToString(payload)
 }
 
-func parsePayloadIfPossible(src, dst, cmd int, payload []byte) string {
+func parsePayloadIfPossible(moduleOutputs map[int]map[int]string, src, dst, cmd int, payload []byte) string {
 	if f, ok := payloadParserByCommand[cmd]; ok {
-		return f(src, dst, payload)
+		return f(moduleOutputs, src, dst, payload)
 	}
 
 	return defaultPayloadParser(src, dst, payload)
@@ -31,7 +31,7 @@ func testDigit(b byte, out int) bool {
 	return b&(1<<out) != 0
 }
 
-func decodeRelais(src, dst int, payload []byte) string {
+func decodeRelais(moduleOutputs map[int]map[int]string, src, dst int, payload []byte) string {
 	if len(payload) < 2 {
 		return defaultPayloadParser(src, dst, payload)
 	}
@@ -42,7 +42,7 @@ func decodeRelais(src, dst int, payload []byte) string {
 		bitPositions := payload[0] | payload[1]
 
 		if testDigit(bitPositions, i) {
-			outputName := mapOutputIfPossible(dst, i)
+			outputName := mapOutputIfPossible(moduleOutputs, dst, i)
 			force := testDigit(payload[0], i)
 			toggle := testDigit(payload[1], i)
 
@@ -60,7 +60,7 @@ func decodeRelais(src, dst int, payload []byte) string {
 	return strings.Join(outputs, ",")
 }
 
-func decodeStatusReport(src, dst int, payload []byte) string {
+func decodeStatusReport(moduleOutputs map[int]map[int]string, src, dst int, payload []byte) string {
 	if len(payload) < 2 {
 		return defaultPayloadParser(src, dst, payload)
 	}
@@ -73,14 +73,14 @@ func decodeStatusReport(src, dst int, payload []byte) string {
 
 	for i := range 8 {
 		if testDigit(payload[1], i) {
-			outputs = append(outputs, mapOutputIfPossible(src, i))
+			outputs = append(outputs, mapOutputIfPossible(moduleOutputs, src, i))
 		}
 	}
 
 	return strings.Join(outputs, ",")
 }
 
-func decodeStatusQuery(src, dst int, payload []byte) string {
+func decodeStatusQuery(moduleOutputs map[int]map[int]string, src, dst int, payload []byte) string {
 	if len(payload) < 2 {
 		return defaultPayloadParser(src, dst, payload)
 	}
@@ -104,7 +104,7 @@ func decodeStatusQuery(src, dst int, payload []byte) string {
 
 	for i := range 8 {
 		if testDigit(payload[1], i) {
-			outputs = append(outputs, mapOutputIfPossible(module, i))
+			outputs = append(outputs, mapOutputIfPossible(moduleOutputs, module, i))
 		}
 	}
 

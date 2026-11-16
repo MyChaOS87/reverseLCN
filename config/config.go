@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -27,21 +28,32 @@ type MqttConfig struct {
 	RootTopic string
 }
 
+// MonitorConfig holds optional human-readable module and output labels.
+type MonitorConfig struct {
+	IDMap         map[int]string
+	ModuleOutputs map[int]map[int]string
+}
+
 // Config struct.
 type Config struct {
-	Logger loggerConfig.Logger
-	Serial SerialConfig
-	Mqtt   MqttConfig
+	Logger  loggerConfig.Logger
+	Serial  SerialConfig
+	Mqtt    MqttConfig
+	Monitor MonitorConfig
 }
 
 // LoadConfig loads config file from given path.
 func LoadConfig(filename string) (*viper.Viper, error) {
 	v := viper.New()
 
-	v.SetConfigName(filename)
-	v.AddConfigPath(".")
-	v.AddConfigPath("./")
-	v.AddConfigPath("")
+	if filepath.Ext(filename) != "" {
+		v.SetConfigFile(filename)
+	} else {
+		v.SetConfigName(filepath.Base(filename))
+		v.AddConfigPath(filepath.Dir(filename))
+		v.AddConfigPath(".")
+	}
+
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.SetEnvPrefix(envPrefix)
 	v.AutomaticEnv()

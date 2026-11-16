@@ -32,6 +32,7 @@ func TestDataStoreAddAndQuery(t *testing.T) {
 
 	tests := []struct {
 		name           string
+		opts           []monitor.Option
 		packets        []lcn.Packet
 		queryLimit     int
 		expectedCount  int
@@ -46,7 +47,18 @@ func TestDataStoreAddAndQuery(t *testing.T) {
 			expectedTimes: nil,
 		},
 		{
-			name:           "single insert",
+			name: "single insert with configured labels",
+			opts: []monitor.Option{
+				monitor.WithIDMap(map[int]string{
+					11: "Switch Kitchen",
+					33: "R8H 33 - Relay A",
+				}),
+				monitor.WithModuleOutputs(map[int]map[int]string{
+					33: {
+						0: "Relay Living Room",
+					},
+				}),
+			},
 			packets:        []lcn.Packet{pktRelais},
 			queryLimit:     5,
 			expectedCount:  1,
@@ -54,12 +66,31 @@ func TestDataStoreAddAndQuery(t *testing.T) {
 			expectedSuffix: "1\tSwitch Kitchen\t0\tR8H 33 - Relay A\trelais\t<Relay Living Room: FORCE OFF>",
 		},
 		{
-			name:           "duplicate insert increments times",
+			name: "duplicate insert increments times",
+			opts: []monitor.Option{
+				monitor.WithIDMap(map[int]string{
+					11: "Switch Kitchen",
+					33: "R8H 33 - Relay A",
+				}),
+				monitor.WithModuleOutputs(map[int]map[int]string{
+					33: {
+						0: "Relay Living Room",
+					},
+				}),
+			},
 			packets:        []lcn.Packet{pktRelais, pktRelais, pktRelais},
 			queryLimit:     5,
 			expectedCount:  1,
 			expectedTimes:  []int{3},
 			expectedSuffix: "3\tSwitch Kitchen\t0\tR8H 33 - Relay A\trelais\t<Relay Living Room: FORCE OFF>",
+		},
+		{
+			name:           "unconfigured datastore uses numeric fallbacks",
+			packets:        []lcn.Packet{pktRelais},
+			queryLimit:     5,
+			expectedCount:  1,
+			expectedTimes:  []int{1},
+			expectedSuffix: "1\t11\t0\t33\trelais\t<33-0: FORCE OFF>",
 		},
 		{
 			name:          "multiple distinct packets with limit",
@@ -81,7 +112,7 @@ func TestDataStoreAddAndQuery(t *testing.T) {
 		t.Run(fmt.Sprintf("%s_%s", t.Name(), tt.name), func(t *testing.T) {
 			t.Parallel()
 
-			ds := monitor.NewDataStore()
+			ds := monitor.NewDataStore(tt.opts...)
 			require.NotNil(t, ds)
 
 			for _, p := range tt.packets {
