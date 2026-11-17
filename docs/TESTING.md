@@ -38,13 +38,13 @@ Protocol bridges and binary serial chunkers must be tested through **output-orie
 ```
 
 ### Tier 1: Pure Protocol & Chunker Tabular Tests
-- **Scope**: Packet deserialization, serialization, checksum computation, bitwise mirroring, sliding-window chunking, and monitor payload decoding.
+- **Scope**: Packet deserialization, serialization, checksum computation, bitwise mirroring, sliding-window chunking (`Collect` & `Flush`), secret redaction (`pkg/hidden`), configuration parsing, and monitor payload decoding.
 - **Characteristics**: 100% in-memory, deterministic, zero network or filesystem I/O, runs in sub-seconds.
-- **Target packages**: [`internal/serial/chunker/lcn`](../internal/serial/chunker/lcn/lcn_test.go), [`pkg/serial/chunker`](../pkg/serial/chunker/chunker_test.go), [`internal/monitor`](../internal/monitor).
+- **Target packages**: [`internal/serial/chunker/lcn`](../internal/serial/chunker/lcn/lcn_test.go), [`pkg/serial/chunker`](../pkg/serial/chunker/chunker_test.go), [`pkg/serial/chunker/plain`](../pkg/serial/chunker/plain/plain_test.go), [`pkg/hidden`](../pkg/hidden/string_test.go), [`config`](../config/config_test.go), [`internal/monitor`](../internal/monitor).
 
 ### Tier 2: In-Memory Component Fakes
-- **Scope**: Testing [`serial.Port`](../pkg/serial/port.go) and [`mqtt.Broker`](../pkg/broker/mqtt/mqttBroker.go) coordination without real USB hardware or external brokers.
-- **Fixtures**: Use `net.Pipe()` or in-memory channel-based serial mocks, and [`mqtttest.NewBroker()`](../pkg/broker/mqtt/mqtttest/simulator.go) with [`mqtttest.Simulator`](../pkg/broker/mqtt/mqtttest/simulator.go) to verify MQTT subscriptions, reconnect re-subscriptions, publishing, and context cancellation.
+- **Scope**: Testing [`serial.Port`](../pkg/serial/port.go), [`mqtt.Broker`](../pkg/broker/mqtt/mqttBroker.go), and startup wiring ([`internal/cmd`](../internal/cmd/init_test.go)) without real USB hardware or external brokers.
+- **Fixtures**: Use `serial.PortOpener` fakes (`pkg/serial/port_test.go`), and [`mqtttest.NewBroker()`](../pkg/broker/mqtt/mqtttest/simulator.go) with [`mqtttest.Simulator`](../pkg/broker/mqtt/mqtttest/simulator.go) to verify FIFO serial ordering, idle-bus flush recovery, MQTT subscriptions, reconnect re-subscriptions, token timeouts, publishing, and context cancellation.
 
 ### Tier 3: Container Integration Tests
 - **Scope**: Live end-to-end MQTT connectivity using an external Mosquitto broker.
@@ -54,9 +54,9 @@ Protocol bridges and binary serial chunkers must be tested through **output-orie
 
 ## Mandatory Test Mechanics
 
-1. **Black-Box Test Packages**: Always define tests in a separate test package (`package <pkg>_test`, e.g., `package lcn_test`, `package chunker_test`). Never access unexported internals directly; test the public contract.
+1. **Black-Box Test Packages**: Always define tests in a separate test package (`package <pkg>_test`, e.g., `package lcn_test`, `package chunker_test`). Never access unexported internals directly; test the public contract (using `export_test.go` only when testing pure internal helpers).
 2. **Parallel Execution (`t.Parallel()`)**:
-   - Every top-level test function must invoke `t.Parallel()`.
+   - Every top-level test function must invoke `t.Parallel()` (unless `t.Setenv` / `t.Chdir` requires serial execution, documented with `//nolint:paralleltest`).
    - Every subtest within table loops must invoke `t.Parallel()`.
    ```go
    func TestDeserialize(t *testing.T) {
@@ -64,7 +64,7 @@ Protocol bridges and binary serial chunkers must be tested through **output-orie
        for _, tt := range tests {
            t.Run(tt.name, func(t *testing.T) {
                t.Parallel()
-               pkt, err := lcn.Deserialize(tt.input)
+               pkt, consumed, err := lcn.Deserialize(tt.input)
                // ...
            })
        }

@@ -28,7 +28,8 @@ flowchart TD
 
     subgraph Pkg["Reusable Platform Libraries (pkg/)"]
         logPkg["pkg/log (Zap SugaredLogger)"]
-        mqttPkg["pkg/broker/mqtt (Paho MQTT Client)"]
+        hiddenPkg["pkg/hidden (Secret String & URL Masking)"]
+        mqttPkg["pkg/broker/mqtt (Paho MQTT Client & TLS)"]
         serialPkg["pkg/serial (Port, Options, Reader/Writer)"]
         chunkerPkg["pkg/serial/chunker (Chunker interface & sliding-buffer)"]
         packetPkg["pkg/serial/chunker/packet (Packet & Deserializer interfaces)"]
@@ -49,7 +50,11 @@ flowchart TD
     lcnMonitor --> logPkg
 
     cmdInit --> cfg
+    cmdInit --> mqttPkg
     cmdInit --> logPkg
+
+    cfg --> hiddenPkg
+    cfg --> logPkg
 
     monitor --> lcnProto
     monitor --> logPkg
@@ -73,7 +78,7 @@ flowchart TD
 
     class lcn2mqtt,lcnMonitor cliClass;
     class cfg,cmdInit,monitor,lcnProto internalClass;
-    class logPkg,mqttPkg,serialPkg,chunkerPkg,packetPkg,plainPkg pkgClass;
+    class logPkg,hiddenPkg,mqttPkg,serialPkg,chunkerPkg,packetPkg,plainPkg pkgClass;
 ```
 
 ---
@@ -111,7 +116,7 @@ sequenceDiagram
     Client->>Broker: Publish to "lcn/in" (JSON packet)
     Broker->>Bridge: MQTT message callback (lcn.Packet)
     Bridge->>Bridge: pkt.Serialize() (mirrorSrc + calcChecksum)
-    Bridge->>Port: go port.Send(wireBytes) (sendQueue channel)
+    Bridge->>Port: port.Send(ctx, wireBytes) (non-blocking FIFO queue)
     Port->>PKU: port.Write(wireBytes)
     PKU->>Bus: Electrical Bus Transmission
 ```
@@ -128,13 +133,15 @@ Because serial connections over USB can experience noise, frame fragmentation, o
 2. **Length Guard**: If `buffer.Len() < minLength` (where `minLength = 6` for LCN), the chunker yields back to the serial reader to await more data.
 3. **Speculative Deserialization**: The chunker presents current buffer bytes to the registered [`packet.Deserializer`](../pkg/serial/chunker/packet/packet.go).
 4. **Resolution**:
-   - **`ErrPacketIncomplete`**: The packet header specifies a larger length than currently buffered (e.g. `Info` specifies length 12 or 20, but only 8 bytes have arrived). The loop breaks without consuming bytes and waits for the next OS read (`continue read_loop`).
-   - **`ErrPacketInvalid` or Checksum Error**: The buffer contains corrupt framing, an illegal length code, or an invalid checksum. The chunker executes `search()` (`buffer.Next(1)`), which **discards exactly 1 byte** from the head of the buffer, shifting the window forward to re-test the subsequent byte as a potential frame start.
-   - **Success**: A clean, checksum-verified packet is assembled. The chunker invokes [`eject(pkt)`](../pkg/serial/chunker/chunker.go) and calls `reset()` (`buffer.Reset()`), clearing the consumed frame and preparing for the next sequence.
+   - **`ErrPacketIncomplete`**: The packet header specifies a larger length than currently buffered (e.g. `Info` specifies length 12 or 20, but only 8 bytes have arrived). The loop breaks without consuming bytes and waits for the next OS read (`continue read_loop`). If the serial read idle timeout (`100ms`) expires with no further bytes arriving, `Flush()` advances past leading stalled noise bytes to recover any valid shorter frame hidden behind them and resets trailing sub-minimum fragments.
+   - **`ErrPacketInvalid` or Checksum Error**: The buffer contains corrupt framing, an illegal length code, or an invalid checksum. The chunker calls `buffer.Next(1)`, **discarding exactly 1 byte** from the head of the buffer to re-test the subsequent byte as a potential frame start.
+   - **Success**: A clean, checksum-verified prefix (`buf[:expectedLen]`) is assembled and returns `(pkt, consumed, nil)`. The chunker invokes [`eject(pkt)`](../pkg/serial/chunker/chunker.go) and advances by **`buffer.Next(consumed)`**, preserving any trailing bytes in `c.buffer` for subsequent loop iterations.
 
 ```mermaid
 flowchart TD
-    Start["Receive byte buffer from serial.Read()"] --> Append["Append bytes to c.buffer"]
+    Start["Receive byte buffer from serial.Read()"] --> CheckRead{"n > 0 bytes read?"}
+    CheckRead -- Yes --> Append["Append bytes to c.buffer"]
+    CheckRead -- "No (100ms idle timeout)" --> Flush["c.buffer: Flush stalled candidates & sub-min tail"]
     Append --> CheckLen{"c.buffer.Len() >= minLength (6)?"}
     
     CheckLen -- No --> Wait["Exit inner loop; await next serial read"]
@@ -147,9 +154,9 @@ flowchart TD
     Log --> Shift["c.buffer.Next(1) (Shift window 1 byte)"]
     Shift --> CheckLen
     
-    Result -- "Success (*lcn.Packet)" --> Eject["eject(pkt) (Invoke callback)"]
-    Eject --> Reset["c.buffer.Reset()"]
-    Reset --> CheckLen
+    Result -- "Success (*lcn.Packet, consumed)" --> Eject["eject(pkt) (Invoke callback)"]
+    Eject --> Advance["c.buffer.Next(consumed)"]
+    Advance --> CheckLen
 ```
 
 ---
@@ -160,13 +167,12 @@ The container images for `lcn2mqtt` are defined in [`Dockerfile`](../Dockerfile)
 
 ### Stage 1: Static Builder (`golang:1.27-alpine`)
 - Runs natively on `$BUILDPLATFORM` (`FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder`) and cross-compiles for `$TARGETOS`/`$TARGETARCH`/`$TARGETVARIANT` (`linux/amd64`, `linux/arm64`, `linux/arm/v7`, `linux/arm/v6`).
-- Installs minimal toolchain requirements (`ca-certificates`, `tzdata`, `musl-utils`) and creates an unprivileged user (`appuser`, `UID=10001`).
-- Compiles a fully static binary with Go build cache mounting:
+- Installs minimal toolchain requirements (`ca-certificates`, `tzdata`) and creates an unprivileged user (`appuser`, `UID=10001`).
+- Compiles a fully static binary (`CGO_ENABLED=0`) with Go build cache mounting and stamps `main.Version` via `-ldflags`:
   ```bash
   CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
-  go build -v -ldflags "-w -s -X main.Version=$APP_VERSION -extldflags '-static'" -o /dist/lcn2mqtt ./cmd/lcn2mqtt
+  go build -v -ldflags "-w -s -X main.Version=${APP_VERSION}" -o /dist/lcn2mqtt ./cmd/lcn2mqtt
   ```
-- Uses `ldd` and `xargs` to verify and resolve any runtime shared library requirements into `/dist`.
 
 ### Stage 2: Runtime (`FROM scratch`)
 - Copies time zone data from `/usr/share/zoneinfo`.
@@ -179,5 +185,6 @@ The container images for `lcn2mqtt` are defined in [`Dockerfile`](../Dockerfile)
 This produces a zero-footprint, hardened image containing no shell, package manager, or unnecessary OS binaries, minimizing attack surface and eliminating container base-image CVEs.
 
 ### Helm Chart Packaging (`helm/charts/reverselcn`)
-- [`helm/charts/reverselcn/`](../helm/charts/reverselcn/) packages `lcn2mqtt` as a non-root, privilege-dropped Kubernetes `DaemonSet` (`runAsNonRoot: true`, `runAsUser: 10001`, `supplementalGroups: [20]` for `dialout`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`) using `updateStrategy.rollingUpdate` (`maxSurge: 0, maxUnavailable: 1`) and mounting only the serial character device (`type: CharDevice`).
+- [`helm/charts/reverselcn/`](../helm/charts/reverselcn/) packages `lcn2mqtt` as a non-root, privilege-dropped Kubernetes `DaemonSet` (`runAsNonRoot: true`, `runAsUser: 10001`, `supplementalGroups: [20]` for `dialout`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`) using `updateStrategy.rollingUpdate` (`maxSurge: 0, maxUnavailable: 1`) and mounting the serial character device (`type: CharDevice`).
+- Automatically injects `LCN_SERIAL_PORT` matching `serialDevice.mountPath` when `serialDevice.enabled` is `true` (unless explicitly overridden in `env`), supports `envFrom` and `extraVolumeMounts`/`extraVolumes` for credentials/TLS mounts, and recommends targeting the USB host node via `nodeSelector`.
 - Published automatically to GitHub Pages via [`.github/workflows/release-chart.yml`](../.github/workflows/release-chart.yml).

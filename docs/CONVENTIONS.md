@@ -26,10 +26,10 @@ Constants must use explicit binary representation (`0b...`) or hex where they re
 
 ```go
 const (
-    minLcnPacketLength = 6
-    lcnPacketLength8   = 8
-    lcnPacketLength12  = 12
-    lcnPacketLength20  = 20
+    MinPacketLength   = 6
+    lcnPacketLength8  = 8
+    lcnPacketLength12 = 12
+    lcnPacketLength20 = 20
 
     infoLengthMask  = 0x0C // 0b00001100
     infoLengthShift = 2
@@ -126,64 +126,43 @@ port := serial.NewPort(
     serial.BaudRate(cfg.Serial.BaudRate),
     serial.PortName(cfg.Serial.Port),
     serial.Deserializer(lcn.Deserialize),
+    serial.MinLength(lcn.MinPacketLength),
 )
 ```
 
 ### MQTT Broker Configuration ([`pkg/broker/mqtt`](../pkg/broker/mqtt/options.go))
 ```go
-type (
-    Option func(*Config)
-    Config struct {
-        clientOptions *mqtt.ClientOptions
-        clientFactory func(*mqtt.ClientOptions) mqtt.Client
-        errorHandler  ErrorHandler
-    }
-)
-
-func BrokerURL(broker string) Option {
-    return func(c *Config) {
-        c.clientOptions.AddBroker(broker)
-    }
-}
-
-func TLS(tls *tls.Config) Option {
-    return func(c *Config) {
-        c.clientOptions.TLSConfig = tls
-    }
-}
-
-func ClientFactory(factory func(*mqtt.ClientOptions) mqtt.Client) Option {
-    return func(c *Config) {
-        if factory != nil {
-            c.clientFactory = factory
-        }
-    }
-}
-
-func OnError(handler ErrorHandler) Option {
-    return func(c *Config) {
-        if handler != nil {
-            c.errorHandler = handler
-        }
-    }
-}
+func BrokerURL(broker string) Option
+func ClientID(clientID string) Option
+func Credentials(username, password string) Option
+func TLS(tls *tls.Config) Option
+func TokenTimeout(timeout time.Duration) Option
+func ClientFactory(factory func(*mqtt.ClientOptions) mqtt.Client) Option
+func OnError(handler ErrorHandler) Option
 ```
 
-Constructors must instantiate sensible defaults before applying variadic options.
+Use [`mqtt.BuildTLSConfig`](../pkg/broker/mqtt/tls.go) to construct `*tls.Config` enforcing `tls.VersionTLS12` minimum, extending system root CAs (`x509.SystemCertPool`) with optional custom CA PEMs, and loading mutual-TLS client key pairs (returning `ErrInvalidTLSConfig` on invalid inputs). Asynchronous publish/subscribe token timeouts wrap `ErrTokenTimeout` and `context.DeadlineExceeded`. Constructors instantiate sensible defaults before applying variadic options.
+
+---
+
+## Secret Redaction (`pkg/hidden`)
+
+Sensitive config fields use [`hidden.String`](../pkg/hidden/string.go) (e.g., `MqttConfig.Password`) and [`hidden.URL`](../pkg/hidden/url.go) (e.g., `MqttConfig.Broker`):
+- Formatting via `String()`, `GoString()`, or `MarshalJSON()` automatically emits `*HIDDEN*` (or masks `user:*HIDDEN*@host` in URLs), keeping startup config logs (`%+v`) safe even when `logger.development: true`.
+- Retrieve plaintext exclusively at client boundaries using `.Reveal()`.
 
 ---
 
 ## Configuration via Viper (`LCN_*`)
 
-Configuration management in [`config/config.go`](../config/config.go) uses Viper with explicit hierarchical mapping:
+Configuration management in [`config/config.go`](../config/config.go) uses Viper with `ExperimentalBindStruct()` and explicit hierarchical mapping so environment variables bind even when keys are absent from `config.yml`:
 
 ```go
 const envPrefix = "LCN"
 
 func LoadConfig(filename string) (*viper.Viper, error) {
-    v := viper.New()
-    v.SetConfigName(filename)
-    v.AddConfigPath(".")
+    v := viper.NewWithOptions(viper.ExperimentalBindStruct())
+    // ...
     v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
     v.SetEnvPrefix(envPrefix)
     v.AutomaticEnv()
@@ -197,6 +176,10 @@ Nested configuration keys map to environment variables prefixed with `LCN_`:
 - `serial.baudRate` -> `LCN_SERIAL_BAUDRATE`
 - `mqtt.broker` -> `LCN_MQTT_BROKER`
 - `mqtt.rootTopic` -> `LCN_MQTT_ROOTTOPIC`
+- `mqtt.clientId` -> `LCN_MQTT_CLIENTID`
+- `mqtt.username` -> `LCN_MQTT_USERNAME`
+- `mqtt.password` -> `LCN_MQTT_PASSWORD`
+- `mqtt.tls.{enabled,caFile,certFile,keyFile,serverName,insecureSkipVerify}` -> `LCN_MQTT_TLS_*`
 - `logger.level` -> `LCN_LOGGER_LEVEL`
 - `logger.development` -> `LCN_LOGGER_DEVELOPMENT`
 

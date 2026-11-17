@@ -38,6 +38,23 @@ GPLv3
 
 ---
 
+## Kubernetes Deployment (Helm)
+
+The chart under [`helm/charts/reverselcn/`](./helm/charts/reverselcn) deploys `lcn2mqtt` as an unprivileged `DaemonSet` mounting the USB serial adapter (`serialDevice.mountPath`, defaulting to `/dev/lcn-pku`):
+
+- When `serialDevice.enabled` is `true`, the template automatically injects `LCN_SERIAL_PORT` matching `serialDevice.mountPath` unless explicitly overridden in `env`.
+- On multi-node clusters, label the node physically attached to the LCN-PKU USB adapter and configure `nodeSelector` in Helm values so pods do not stall in `ContainerCreating` on nodes without the device:
+  ```bash
+  kubectl label nodes <usb-host> node-role.kubernetes.io/lcn-serial=true
+  ```
+  ```yaml
+  nodeSelector:
+    node-role.kubernetes.io/lcn-serial: "true"
+  ```
+- Pass MQTT credentials via `env` / `envFrom` (`LCN_MQTT_CLIENTID`, `LCN_MQTT_USERNAME`, `LCN_MQTT_PASSWORD`) and mount custom CA/client certificates using `extraVolumeMounts` / `extraVolumes` with `LCN_MQTT_TLS_*`.
+
+---
+
 ## Documentation & Development
 
 For deeper technical documentation, architecture blueprints, coding standards, and developer workflows, refer to:

@@ -81,25 +81,28 @@ type Packet struct {
 ```
 
 ### [`packet.Deserializer`](./pkg/serial/chunker/packet/packet.go)
-A function signature `func(buf []byte) (Packet, error)` that attempts to parse a raw byte slice into a typed packet. [`lcn.Deserialize`](./internal/serial/chunker/lcn/lcn.go) is the primary deserializer for LCN traffic.
+A function signature `func(buf []byte) (Packet, int, error)` that attempts to parse a frame prefix from `buf`, returning the parsed packet and consumed byte count. [`lcn.Deserialize`](./internal/serial/chunker/lcn/lcn.go) is the primary deserializer for LCN traffic.
 
 ### `ErrPacketIncomplete` vs `ErrPacketInvalid`
 The chunking engine distinguishes between partial frames and corrupt data using wrapped sentinel errors:
-- [`packet.ErrPacketIncomplete`](./pkg/serial/chunker/packet/packet.go) (wrapped by `ErrLcnPacketIncomplete`): The buffer contains fewer bytes than the minimum packet length (6) or fewer bytes than indicated by the `Info` length code. The chunker must **continue accumulating** incoming bytes.
+- [`packet.ErrPacketIncomplete`](./pkg/serial/chunker/packet/packet.go) (wrapped by `ErrLcnPacketIncomplete`): The buffer contains fewer bytes than the minimum packet length (`MinPacketLength = 6`) or fewer bytes than indicated by the `Info` length code. The chunker must **continue accumulating** incoming bytes.
 - [`packet.ErrPacketInvalid`](./pkg/serial/chunker/packet/packet.go) (wrapped by `ErrLcnPacketInvalid` and `ErrLcnPacketInvalidChecksum`): The buffer contains an illegal length, an invalid length code, or a mismatched checksum. The chunker must **advance its search window by 1 byte** to discard noise and re-synchronize to the next valid frame boundary.
 
 ### [`chunker.Chunker`](./pkg/serial/chunker/chunker.go) & [`chunker.EjectFunc`](./pkg/serial/chunker/chunker.go)
 - `EjectFunc`: Callback `func(packet.Packet)` invoked when a valid packet is completely assembled.
-- `Chunker`: Interface `Collect(buf []byte, eject EjectFunc)`. Manages an internal `bytes.Buffer`, slicing through serial chunks, handling fragmentation across OS read boundaries, and discarding corrupt noise bytes until a clean frame emerges.
+- `Chunker`: Interface `Collect(buf []byte, eject EjectFunc)` and `Flush(eject EjectFunc)`. Manages an internal `bytes.Buffer`, consuming `consumed` bytes (`buffer.Next(consumed)`) per decoded frame so trailing buffered frames stay intact, and draining/recovering stalled frames when a serial read idle timeout triggers `Flush`.
 
 ---
 
-## Serial & Broker Domain
+## Serial, Security & Broker Domain
 
 ### [`serial.Port`](./pkg/serial/port.go)
 The serial communication abstraction managing asynchronous USB tty read and write loops:
-- `Run(ctx context.Context, cancel context.CancelFunc, eject chunker.EjectFunc)`: Spawns the background reader goroutine (feeding raw bytes into the chunker) and the writer goroutine.
-- `Send(buf []byte)`: Non-blocking enqueue to `sendQueue chan []byte` for transmission onto the physical wire.
+- `Run(ctx context.Context, eject chunker.EjectFunc) error`: Opens the device, runs and joins internal closer, writer, and reader goroutines until `ctx` cancels or a fatal read/config error occurs, and triggers `Chunker.Flush` on idle read timeouts (`n == 0`).
+- `Send(ctx context.Context, buf []byte) error`: Non-blocking FIFO enqueue of a cloned copy of `buf` to `sendQueue` (`ErrSendQueueFull` on saturation, context error when `ctx` is done).
+
+### [`hidden.String`](./pkg/hidden/string.go) & [`hidden.URL`](./pkg/hidden/url.go)
+Type-safe secret wrappers under [`pkg/hidden`](./pkg/hidden/string.go) preventing credential leakage across `fmt` (`%v`, `%+v`, `%#v`) and JSON logs by rendering `*HIDDEN*` (or masking `user:*HIDDEN*@host` in URLs), exposing plaintext exclusively via `.Reveal()`.
 
 ### [`mqtt.Broker`](./pkg/broker/mqtt/mqttBroker.go)
 The concrete MQTT broker client backed by the Eclipse Paho MQTT client (`github.com/eclipse/paho.mqtt.golang`):
@@ -111,9 +114,10 @@ Represents an addressable MQTT topic with generic subscribe and publish operatio
 - `PublishString(s string)`: Publishes a raw string payload with QoS 1.
 - `Publish(data any) error`: Marshals `data` to JSON (returning any marshal error synchronously) and publishes the resulting string with QoS 1.
 - `Subscribe[T any](callback CallbackFunction[T])`: Registers a persistent subscription (QoS 0, re-subscribed automatically on broker reconnect) that unmarshals incoming JSON message payloads directly into a value of type `T` (`var payload T`) and invokes `callback(topic, payload)`.
+- `SubscribeRaw(callback CallbackFunction[[]byte])`: Registers a persistent subscription (QoS 0, re-subscribed automatically on broker reconnect) that delivers raw byte payloads without JSON unmarshaling.
 
 ### [`mqtt.Error`](./pkg/broker/mqtt/error.go) & [`mqtttest.Simulator`](./pkg/broker/mqtt/mqtttest/simulator.go)
-- `mqtt.Error`: Structured error (`OpSubscribe`, `OpPublish`, `OpUnmarshal`) carrying `Op`, `Topic`, raw `Payload`, and underlying `Err` (implementing `Error()` and `Unwrap()`), delivered to the configurable `mqtt.OnError(handler)` callback.
+- `mqtt.Error`: Structured error (`OpSubscribe`, `OpPublish`, `OpUnmarshal`) carrying `Op`, `Topic`, raw `Payload`, and underlying `Err` (wrapping `ErrTokenTimeout` + `context.DeadlineExceeded` on acknowledgement timeouts, implementing `Error()` and `Unwrap()`), delivered to the configurable `mqtt.OnError(handler)` callback.
 - `mqtttest.Simulator` & `mqtttest.NewBroker`: Reusable in-memory Paho test harness in `pkg/broker/mqtt/mqtttest` separating the unexported `paho.Client` mock implementation (`client.go`) from simulation controls (`SimulateConnect`, `SimulateDisconnect`, `SimulateReconnect`, `Deliver`, `SubscribedTopics`, `PublishedMessages`, `Disconnected`, `DeferOnConnect`).
 
 ---
