@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	minLcnPacketLength = 6
-	lcnPacketLength8   = 8
-	lcnPacketLength12  = 12
-	lcnPacketLength20  = 20
+	// MinPacketLength is the wire length in bytes of the smallest LCN packet (header only, empty payload).
+	MinPacketLength   = 6
+	lcnPacketLength8  = 8
+	lcnPacketLength12 = 12
+	lcnPacketLength20 = 20
 
 	infoLengthMask  = 0x0C
 	infoLengthShift = 2
@@ -44,7 +45,7 @@ type Packet struct {
 func getExpectedLength(info byte) int {
 	switch (info & infoLengthMask) >> infoLengthShift {
 	case lenCode6:
-		return minLcnPacketLength
+		return MinPacketLength
 	case lenCode8:
 		return lcnPacketLength8
 	case lenCode12:
@@ -58,7 +59,7 @@ func getExpectedLength(info byte) int {
 
 func getLengthCode(bufLen int) (byte, bool) {
 	switch bufLen {
-	case minLcnPacketLength:
+	case MinPacketLength:
 		return lenCode6, true
 	case lcnPacketLength8:
 		return lenCode8, true
@@ -71,49 +72,50 @@ func getLengthCode(bufLen int) (byte, bool) {
 	}
 }
 
-func Deserialize(buf []byte) (packet.Packet, error) {
-	if len(buf) < minLcnPacketLength {
-		return nil, ErrLcnPacketIncomplete
+func Deserialize(buf []byte) (packet.Packet, int, error) {
+	if len(buf) < MinPacketLength {
+		return nil, 0, ErrLcnPacketIncomplete
 	}
 
-	lcn := new(Packet)
-
-	payloadLength := len(buf) - minLcnPacketLength
-
-	lcn.Src = mirrorSrc(buf[0])
-	lcn.Info = buf[1]
-	lcn.Checksum = buf[2]
-	lcn.Seg = buf[3]
-	lcn.Dst = buf[4]
-	lcn.Cmd = buf[5]
-
-	lcn.Payload = make([]byte, payloadLength)
-	copy(lcn.Payload, buf[minLcnPacketLength:minLcnPacketLength+payloadLength])
-
-	expectedLen := getExpectedLength(lcn.Info)
+	expectedLen := getExpectedLength(buf[1])
+	if expectedLen < MinPacketLength {
+		return nil, 0, ErrLcnPacketInvalid
+	}
 
 	if len(buf) < expectedLen {
-		return nil, ErrLcnPacketIncomplete
+		return nil, 0, ErrLcnPacketIncomplete
 	}
 
-	if len(buf) > expectedLen {
-		return nil, ErrLcnPacketInvalid
+	frame := buf[:expectedLen]
+
+	if checksum := calcChecksum(frame); checksum != frame[2] {
+		log.Debugf("Wrong Checksum is %x expected: %x", frame[2], checksum)
+
+		return nil, 0, ErrLcnPacketInvalidChecksum
 	}
 
-	if checksum := calcChecksum(buf); checksum != lcn.Checksum {
-		log.Debugf("Wrong Checksum is %x expected: %x", lcn.Checksum, checksum)
+	payloadLength := expectedLen - MinPacketLength
+	payload := make([]byte, payloadLength)
+	copy(payload, frame[MinPacketLength:expectedLen])
 
-		return nil, ErrLcnPacketInvalidChecksum
+	lcn := &Packet{
+		Src:      mirrorSrc(frame[0]),
+		Info:     frame[1],
+		Checksum: frame[2],
+		Seg:      frame[3],
+		Dst:      frame[4],
+		Cmd:      frame[5],
+		Payload:  payload,
 	}
 
 	log.Debugf("Deserialized LCN Packet {%s}", lcn.ToString())
 
-	return lcn, nil
+	return lcn, expectedLen, nil
 }
 
 // Serialize encodes the packet and sets checksum and length information by itself.
 func (lcn *Packet) Serialize() ([]byte, error) {
-	bufLen := minLcnPacketLength + len(lcn.Payload)
+	bufLen := MinPacketLength + len(lcn.Payload)
 	buf := make([]byte, bufLen)
 	buf[0] = mirrorSrc(lcn.Src)
 	buf[1] = lcn.Info
@@ -121,7 +123,7 @@ func (lcn *Packet) Serialize() ([]byte, error) {
 	buf[3] = lcn.Seg
 	buf[4] = lcn.Dst
 	buf[5] = lcn.Cmd
-	copy(buf[minLcnPacketLength:], lcn.Payload)
+	copy(buf[MinPacketLength:], lcn.Payload)
 
 	code, ok := getLengthCode(bufLen)
 	if !ok {

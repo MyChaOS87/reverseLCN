@@ -13,4 +13,4 @@ type Packet interface {
 	ToNiceString() string // can leave out less relevant information and should highlight most important information
 }
 
-type Deserializer func(buf []byte) (Packet, error)
+type Deserializer func(buf []byte) (Packet, int, error)

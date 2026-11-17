@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -15,24 +16,26 @@ const (
 	configFilename = "./config/config"
 )
 
-func Init() (ctx context.Context, cancel context.CancelFunc, cfg *config.Config) {
+// Init loads the default configuration, initializes logging, and returns a signal-aware context.
+func Init() (context.Context, context.CancelFunc, *config.Config, error) {
+	return InitWithConfig(context.Background(), configFilename)
+}
+
+// InitWithConfig loads configuration from configPath, initializes logging, and listens for shutdown signals.
+func InitWithConfig(
+	parentCtx context.Context,
+	configPath string,
+) (context.Context, context.CancelFunc, *config.Config, error) {
 	log.Default().SetFlags(log.Ldate | log.LUTC | log.Ltime | log.Llongfile)
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-
-	ctx, cancel = context.WithCancel(context.Background())
-
-	cfgFile, err := config.LoadConfig(configFilename)
+	cfgFile, err := config.LoadConfig(configPath)
 	if err != nil {
-		log.Printf("FATAL: LoadConfig(%v): %v", configFilename, err)
-		cancel()
+		return nil, nil, nil, fmt.Errorf("load config %q: %w", configPath, err)
 	}
 
-	cfg, err = config.ParseConfig(cfgFile)
+	cfg, err := config.ParseConfig(cfgFile)
 	if err != nil {
-		log.Printf("FATAL: ParseConfig: %v", err)
-		cancel()
+		return nil, nil, nil, fmt.Errorf("parse config %q: %w", configPath, err)
 	}
 
 	appLogger := logger.NewLogger(&cfg.Logger)
@@ -44,12 +47,7 @@ func Init() (ctx context.Context, cancel context.CancelFunc, cfg *config.Config)
 		appLogger.Infof("config: %+v", cfg)
 	}
 
-	go func() {
-		<-quit
+	ctx, stop := signal.NotifyContext(parentCtx, os.Interrupt, syscall.SIGTERM)
 
-		appLogger.Info("killed by signal")
-		cancel()
-	}()
-
-	return ctx, cancel, cfg
+	return ctx, stop, cfg, nil
 }

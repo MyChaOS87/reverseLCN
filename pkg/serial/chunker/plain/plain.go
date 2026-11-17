@@ -8,11 +8,11 @@ import (
 
 type Plain []byte
 
-func Deserialize(buf []byte) (packet.Packet, error) {
+func Deserialize(buf []byte) (packet.Packet, int, error) {
 	p := make(Plain, len(buf))
 	copy(p, buf)
 
-	return &p, nil
+	return &p, len(buf), nil
 }
 
 func (p *Plain) Serialize() ([]byte, error) {

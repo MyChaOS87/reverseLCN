@@ -33,9 +33,10 @@ func TestPlainPacket(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			pkt, err := plain.Deserialize(tt.input)
+			pkt, consumed, err := plain.Deserialize(tt.input)
 			require.NoError(t, err)
 			require.NotNil(t, pkt)
+			assert.Equal(t, len(tt.input), consumed)
 
 			serialized, err := pkt.Serialize()
 			require.NoError(t, err)

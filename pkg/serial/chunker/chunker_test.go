@@ -31,33 +31,71 @@ func (*testPacket) ToString() string {
 
 var _ packet.Packet = &testPacket{}
 
-func testDeserialize(buf []byte) (packet.Packet, error) {
+func testDeserialize(buf []byte) (packet.Packet, int, error) {
 	if len(buf) < 2 {
-		return nil, packet.ErrPacketInvalid
+		return nil, 0, packet.ErrPacketInvalid
 	}
 
 	// first byte is the expected length of the packet, only 2 or 3 are valid
-	expectedLenght := int(buf[0])
-	if expectedLenght > 3 || expectedLenght < 2 {
-		return nil, packet.ErrPacketInvalid
+	expectedLength := int(buf[0])
+	if expectedLength > 3 || expectedLength < 2 {
+		return nil, 0, packet.ErrPacketInvalid
 	}
 
 	// if the buffer is not long enough, return incomplete
-	if len(buf) < expectedLenght {
-		return nil, packet.ErrPacketIncomplete
+	if len(buf) < expectedLength {
+		return nil, 0, packet.ErrPacketIncomplete
 	}
 
-	// check that all elements of buffer are the same
-	for _, b := range buf[1:] {
-		if b != buf[0] {
-			return nil, packet.ErrPacketInvalid
+	frame := buf[:expectedLength]
+
+	// check that all elements of the frame are the same
+	for _, b := range frame[1:] {
+		if b != frame[0] {
+			return nil, 0, packet.ErrPacketInvalid
 		}
 	}
 
-	r := make(testPacket, 0, len(buf))
-	r = append(r, buf...)
+	r := make(testPacket, len(frame))
+	copy(r, frame)
 
-	return &r, nil
+	return &r, expectedLength, nil
+}
+
+// headerLenDeserialize models protocols whose length field sits at buf[1] (like LCN's Info byte):
+// frame = [tag, expectedLen, payload...], valid when expectedLen is 2 or 6 and all trailing bytes equal tag^expectedLen.
+func headerLenDeserialize(buf []byte) (packet.Packet, int, error) {
+	const (
+		minLen  = 2
+		longLen = 6
+	)
+
+	if len(buf) < minLen {
+		return nil, 0, packet.ErrPacketIncomplete
+	}
+
+	expectedLen := int(buf[1])
+	if expectedLen != minLen && expectedLen != longLen {
+		return nil, 0, packet.ErrPacketInvalid
+	}
+
+	if len(buf) < expectedLen {
+		return nil, 0, packet.ErrPacketIncomplete
+	}
+
+	frame := buf[:expectedLen]
+	check := frame[0] ^ frame[1]
+
+	for _, b := range frame[minLen:] {
+		if b != check {
+			return nil, 0, packet.ErrPacketInvalid
+		}
+	}
+
+	r := make(testPacket, len(frame))
+	copy(r, frame)
+
+	return &r, expectedLen, nil
 }
 
 var _ packet.Deserializer = testDeserialize
@@ -127,6 +165,92 @@ func TestChunkerCollect(t *testing.T) {
 				c.Collect(buf, func(p packet.Packet) {
 					got = append(got, p)
 				})
+			}
+
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestChunkerResyncAndFlush(t *testing.T) {
+	t.Parallel()
+
+	type step struct {
+		collect []byte
+		flush   bool
+	}
+
+	tests := []struct {
+		name     string
+		steps    []step
+		expected []packet.Packet
+	}{
+		{
+			name: "1 noise byte before 2-byte frame whose first byte looks like 6-byte length recovers both frames",
+			steps: []step{
+				// 0xFF (noise) + V=[0x06, 0x02] + W1=[0x02, 0x02] + W2=[0x03, 0x02]
+				// When 0xFF is at index 0, buf[1]==0x06 requests 6 bytes, accumulating 7 bytes across V+W1+W2.
+				// Deserializer must consume only 2 bytes per valid frame via Next(consumed) instead of Reset().
+				{collect: []byte{0xFF, 0x06, 0x02, 0x02, 0x02, 0x03, 0x02}},
+			},
+			expected: []packet.Packet{
+				&testPacket{0x06, 0x02},
+				&testPacket{0x02, 0x02},
+				&testPacket{0x03, 0x02},
+			},
+		},
+		{
+			name: "idle flush recovers stalled shorter frame behind noise byte",
+			steps: []step{
+				{collect: []byte{0xFF, 0x06, 0x02}},
+				{flush: true},
+				{collect: []byte{0x05, 0x02}},
+			},
+			expected: []packet.Packet{
+				&testPacket{0x06, 0x02},
+				&testPacket{0x05, 0x02},
+			},
+		},
+		{
+			name: "idle flush discards sub-minLength noise fragment before next frame",
+			steps: []step{
+				{collect: []byte{0xAA}},
+				{flush: true},
+				{collect: []byte{0x04, 0x02}},
+			},
+			expected: []packet.Packet{
+				&testPacket{0x04, 0x02},
+			},
+		},
+		{
+			name: "idle flush on empty buffer is a no-op",
+			steps: []step{
+				{flush: true},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			c := chunker.NewChunker(headerLenDeserialize, 2)
+
+			var got []packet.Packet
+
+			eject := func(p packet.Packet) {
+				got = append(got, p)
+			}
+
+			for _, s := range tt.steps {
+				if len(s.collect) > 0 {
+					c.Collect(s.collect, eject)
+				}
+
+				if s.flush {
+					c.Flush(eject)
+				}
 			}
 
 			assert.Equal(t, tt.expected, got)

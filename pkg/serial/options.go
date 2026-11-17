@@ -1,22 +1,37 @@
 package serial
 
 import (
+	"time"
+
 	"go.bug.st/serial"
 
 	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/packet"
 	"github.com/MyChaOS87/reverseLCN/pkg/serial/chunker/plain"
 )
 
+const (
+	defaultBaudRate      = 9600
+	defaultDataBits      = 8
+	defaultSendQueueSize = 128
+	defaultReadTimeout   = 100 * time.Millisecond
+)
+
+// PortOpenerFunc opens a serial device with the given mode.
+type PortOpenerFunc func(portName string, mode *serial.Mode) (serial.Port, error)
+
 type (
 	Option func(*Config)
 	Config struct {
-		portName     string
-		baudRate     int
-		parity       serial.Parity
-		dataBits     int
-		stopBits     serial.StopBits
-		deserializer packet.Deserializer
-		minLength    int
+		portName      string
+		baudRate      int
+		parity        serial.Parity
+		dataBits      int
+		stopBits      serial.StopBits
+		deserializer  packet.Deserializer
+		minLength     int
+		sendQueueSize int
+		readTimeout   time.Duration
+		openPort      PortOpenerFunc
 	}
 )
 
@@ -62,16 +77,44 @@ func MinLength(minLength int) Option {
 	}
 }
 
+// SendQueueSize configures the outbound serial frame queue capacity.
+func SendQueueSize(size int) Option {
+	return func(c *Config) {
+		if size > 0 {
+			c.sendQueueSize = size
+		}
+	}
+}
+
+// ReadTimeout configures the inter-byte read timeout used to detect an idle bus.
+func ReadTimeout(timeout time.Duration) Option {
+	return func(c *Config) {
+		if timeout > 0 {
+			c.readTimeout = timeout
+		}
+	}
+}
+
+// PortOpener overrides the function used to open the underlying serial device.
+func PortOpener(opener PortOpenerFunc) Option {
+	return func(c *Config) {
+		if opener != nil {
+			c.openPort = opener
+		}
+	}
+}
+
 func newDefaultConfig() *Config {
 	return &Config{
-		portName: "/dev/ttyACM0",
-		//nolint:mnd
-		baudRate: 9600,
-		parity:   serial.NoParity,
-
-		dataBits:     8,
-		stopBits:     serial.OneStopBit,
-		deserializer: plain.Deserialize,
-		minLength:    1,
+		portName:      "/dev/ttyACM0",
+		baudRate:      defaultBaudRate,
+		parity:        serial.NoParity,
+		dataBits:      defaultDataBits,
+		stopBits:      serial.OneStopBit,
+		deserializer:  plain.Deserialize,
+		minLength:     1,
+		sendQueueSize: defaultSendQueueSize,
+		readTimeout:   defaultReadTimeout,
+		openPort:      serial.Open,
 	}
 }
