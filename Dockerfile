@@ -2,8 +2,9 @@ FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETVARIANT
+ARG APP_VERSION=dev
 
-RUN apk update && apk add --no-cache git ca-certificates tzdata musl-utils && update-ca-certificates
+RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
 
 ENV USER=appuser
 ENV UID=10001
@@ -28,9 +29,7 @@ COPY cmd ./cmd
 RUN \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
-    go build -v -ldflags "-w -s -X main.Version=$APP_VERSION -extldflags '-static'" -o /dist/lcn2mqtt ./cmd/lcn2mqtt
-RUN (ldd /dist/lcn2mqtt || true) | tr -s '[:blank:]' '\n' | grep '^/' | \
-    xargs -r -I % sh -c 'mkdir -p $(dirname /dist%); cp % /dist%;'
+    go build -v -ldflags "-w -s -X main.Version=${APP_VERSION}" -o /dist/lcn2mqtt ./cmd/lcn2mqtt
 
 
 ############################

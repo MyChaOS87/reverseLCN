@@ -34,23 +34,50 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- with .Values.env }}
+          {{- $hasSerialPort := false }}
+          {{- range .Values.env }}
+          {{- if eq .name "LCN_SERIAL_PORT" }}
+          {{- $hasSerialPort = true }}
+          {{- end }}
+          {{- end }}
+          {{- $injectSerialPort := and .Values.serialDevice.enabled (not $hasSerialPort) }}
+          {{- if or $injectSerialPort .Values.env }}
           env:
+            {{- if $injectSerialPort }}
+            - name: LCN_SERIAL_PORT
+              value: {{ .Values.serialDevice.mountPath | quote }}
+            {{- end }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.serialDevice.enabled }}
+          {{- if or .Values.serialDevice.enabled .Values.extraVolumeMounts }}
           volumeMounts:
+            {{- if .Values.serialDevice.enabled }}
             - name: serial-device
               mountPath: {{ .Values.serialDevice.mountPath }}
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if .Values.serialDevice.enabled }}
+      {{- if or .Values.serialDevice.enabled .Values.extraVolumes }}
       volumes:
+        {{- if .Values.serialDevice.enabled }}
         - name: serial-device
           hostPath:
             path: {{ .Values.serialDevice.hostPath }}
             type: {{ .Values.serialDevice.type | default "CharDevice" }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

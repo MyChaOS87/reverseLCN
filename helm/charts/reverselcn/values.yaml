@@ -56,8 +56,17 @@ resources:
   limits:
     memory: 32Mi
 
+# When serialDevice.enabled is true, LCN_SERIAL_PORT is injected automatically from
+# serialDevice.mountPath unless explicitly overridden in env below.
 env: []
+envFrom: []
 
+extraVolumeMounts: []
+extraVolumes: []
+
+# Strongly recommended on multi-node clusters: label the physical USB host node
+# (`kubectl label nodes <usb-host> node-role.kubernetes.io/lcn-serial=true`) and set
+# `nodeSelector` so pods do not stall in ContainerCreating on nodes without the LCN-PKU adapter.
 nodeSelector: {}
 
 tolerations: []
